@@ -4,10 +4,11 @@ Format detection for Clickpak.
 Detects file type from extension, MIME type, and content inspection.
 """
 
+import os
 import mimetypes
 import magic
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict, Any
 
 # Initialize mimetypes
 mimetypes.init()
@@ -141,4 +142,13 @@ class FormatDetector:
             return False
 
 
-import os
+def detect_file(path) -> Dict[str, Any]:
+    """Detect file format and return result dict."""
+    p = Path(path)
+    detector = FormatDetector()
+    fmt = detector.detect(p)
+    return {
+        "format": fmt,
+        "path": str(p.resolve()) if p.exists() else str(p),
+        "detected": fmt is not None,
+    }
