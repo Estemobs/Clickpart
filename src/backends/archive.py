@@ -4,9 +4,11 @@ Archive backend for .tar.gz, .tar.xz, .zip, etc.
 Heuristic-based installation as per roadmap.
 """
 
-import tempfile
+import os
 import shutil
+import subprocess
 import tarfile
+import tempfile
 import zipfile
 from pathlib import Path
 from typing import List
@@ -50,13 +52,41 @@ class ArchiveBackend(BaseBackend):
         except Exception:
             return []
     
+    def _safe_target(self, dest: Path, name: str, linkname: str | None = None) -> None:
+        """Reject archive members that would escape ``dest`` (path traversal)."""
+        root = dest.resolve()
+        target = (root / name).resolve()
+        if not target.is_relative_to(root):
+            raise ValueError(f"Chemin d'archive non autorisé: {name}")
+        if linkname:
+            link = (target.parent / linkname) if name else (root / linkname)
+            if not link.resolve().is_relative_to(root):
+                raise ValueError(f"Lien d'archive non autorisé: {linkname}")
+
     def _extract_archive(self, path: Path, dest: Path):
+        dest = Path(dest)
         if path.suffix.lower() == '.zip':
             with zipfile.ZipFile(path, 'r') as zf:
+                for name in zf.namelist():
+                    self._safe_target(dest, name)
                 zf.extractall(dest)
         else:
             with tarfile.open(path, 'r:*') as tf:
-                tf.extractall(dest)
+                members = []
+                for member in tf.getmembers():
+                    self._safe_target(dest, member.name)
+                    if member.issym():
+                        self._safe_target(dest, member.name, member.linkname)
+                    elif member.islnk():
+                        root = dest.resolve()
+                        link = (root / member.linkname).resolve()
+                        if not link.is_relative_to(root):
+                            raise ValueError(f"Lien d'archive non autorisé: {member.linkname}")
+                    if member.isdev() or member.isfifo():
+                        raise ValueError(f"Type de fichier d'archive non autorisé: {member.name}")
+                    members.append(member)
+                kwargs = {"filter": "data"} if hasattr(tarfile, "data_filter") else {}
+                tf.extractall(dest, members=members, **kwargs)
     
     def install(self, path: Path) -> tuple[bool, str]:
         """
@@ -66,8 +96,6 @@ class ArchiveBackend(BaseBackend):
         3. Contains install.sh/Makefile -> show content, ask for explicit confirmation
         4. Otherwise -> offer to extract only
         """
-        import subprocess
-        
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
             self._extract_archive(path, tmpdir)
@@ -95,7 +123,6 @@ class ArchiveBackend(BaseBackend):
             return True, f"Extracted to {extract_dir}"
     
     def _install_pkgbuild(self, build_dir: Path) -> tuple[bool, str]:
-        import subprocess
         try:
             result = subprocess.run(
                 ["makepkg", "-si", "--noconfirm"],
@@ -158,6 +185,3 @@ class ArchiveBackend(BaseBackend):
             return True, f"Installed to {opt_dir}, menu entry created"
         except Exception as e:
             return False, str(e)
-
-
-import os
