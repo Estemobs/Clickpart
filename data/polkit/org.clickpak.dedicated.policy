@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+"http://www.freedesktop.org/standards/PolicyKit/1.0/policyconfig.dtd">
+<policyconfig>
+  <vendor>Clickpak</vendor>
+  <vendor_url>https://github.com/clickpak/clickpak</vendor_url>
+  <icon_name>clickpak</icon_name>
+  <action id="org.clickpak.install.dedicated">
+    <description>Install packages via Clickpak (restricted)</description>
+    <description xml:lang="fr">Installer des paquets via Clickpak (restreint)</description>
+    <message>Clickpak requires authorization to install system packages. Only allow if you trust the source.</message>
+    <message xml:lang="fr">Clickpak demande l'autorisation pour installer des paquets système. N'acceptez que si vous faites confiance à la source.</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/bin/pkexec</annotate>
+  </action>
+  <action id="org.clickpak.install.snap">
+    <description>Install Snap packages via Clickpak</description>
+    <message>Clickpak requires authorization to install Snap packages</message>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/bin/snap</annotate>
+  </action>
+</policyconfig>

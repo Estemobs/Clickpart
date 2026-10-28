@@ -21,8 +21,9 @@ class RunScriptBackend(BaseBackend):
         return f"Installer script: {path.name}\n⚠️  WARNING: This will execute an arbitrary script. Only run if you trust the source."
     
     def get_install_command(self, path: Path) -> List[str]:
-        # Make executable first, then run
-        return ["sh", "-c", f"chmod +x '{path}' && '{path}'"]
+        # Immédiat, sans interpolation shell — mais avec avertissement
+        # On passe le chemin directement, pas dans un -c
+        return ["/bin/sh", str(path)]
     
     def requires_root(self) -> bool:
         # Could be either, default to False but warn
