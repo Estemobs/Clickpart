@@ -70,13 +70,91 @@ def test_extract_rejects_zip_path_traversal(tmp_path):
     assert not (tmp_path / "escape.txt").exists()
 
 
-def test_extract_accepts_normal_archive(tmp_path):
+def test_extract_rejects_tar_symlink_escape(tmp_path):
+    archive = tmp_path / "symlink.tar"
+    with tarfile.open(archive, "w") as tf:
+        info = tarfile.TarInfo("link")
+        info.type = tarfile.SYMTYPE
+        info.linkname = "../../outside"
+        tf.addfile(info)
+
+    dest = tmp_path / "dest"
+    dest.mkdir()
+
+    with pytest.raises(ValueError):
+        ArchiveBackend()._extract_archive(archive, dest)
+
+    assert not (dest / ".." / ".." / "outside").exists()
+
+
+def test_extract_rejects_tar_hardlink_escape(tmp_path):
+    archive = tmp_path / "hardlink.tar"
+    with tarfile.open(archive, "w") as tf:
+        info = tarfile.TarInfo("hard")
+        info.type = tarfile.LNKTYPE
+        info.linkname = "../../outside"
+        tf.addfile(info)
+
+    dest = tmp_path / "dest"
+    dest.mkdir()
+
+    with pytest.raises(ValueError):
+        ArchiveBackend()._extract_archive(archive, dest)
+
+    assert not (dest / ".." / ".." / "outside").exists()
+
+
+def test_extract_rejects_tar_absolute_path(tmp_path):
+    outside = tmp_path / "absolute-escape"
+    archive = tmp_path / "absolute.tar"
+    with tarfile.open(archive, "w") as tf:
+        info = tarfile.TarInfo(str(outside))
+        data = b"owned"
+        info.size = len(data)
+        tf.addfile(info, io.BytesIO(data))
+
+    dest = tmp_path / "dest"
+    dest.mkdir()
+
+    with pytest.raises(ValueError):
+        ArchiveBackend()._extract_archive(archive, dest)
+
+    assert not outside.exists()
+
+
+def test_extract_rejects_tar_fifo(tmp_path):
+    archive = tmp_path / "fifo.tar"
+    with tarfile.open(archive, "w") as tf:
+        info = tarfile.TarInfo("fifo")
+        info.type = tarfile.FIFOTYPE
+        tf.addfile(info)
+
+    dest = tmp_path / "dest"
+    dest.mkdir()
+
+    with pytest.raises(ValueError):
+        ArchiveBackend()._extract_archive(archive, dest)
+
+
+def test_extract_accepts_normal_tar_archive(tmp_path):
     archive = tmp_path / "ok.tar"
     with tarfile.open(archive, "w") as tf:
         info = tarfile.TarInfo("ok.txt")
         data = b"hello"
         info.size = len(data)
         tf.addfile(info, io.BytesIO(data))
+
+    dest = tmp_path / "dest"
+    dest.mkdir()
+    ArchiveBackend()._extract_archive(archive, dest)
+
+    assert (dest / "ok.txt").read_bytes() == b"hello"
+
+
+def test_extract_accepts_normal_zip_archive(tmp_path):
+    archive = tmp_path / "ok.zip"
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr("ok.txt", b"hello")
 
     dest = tmp_path / "dest"
     dest.mkdir()
