@@ -1,0 +1,89 @@
+# Maintainer: Clickpak Contributors
+pkgname=clickpak
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Universal graphical installer for Linux: double-click .flatpakref, .AppImage, .pkg.tar.zst and more to install them"
+arch=('any')
+url="https://github.com/clickpak/clickpak"
+license=('GPL-3.0-or-later')
+depends=(
+  'python'
+  'python-gobject'
+  'gtk4'
+  'libadwaita'
+  'python-magic'
+  'flatpak'
+  'pacman'
+  'polkit'
+  'shared-mime-info'
+  'desktop-file-utils'
+)
+optdepends=(
+  'snapd: for Snap package support'
+  'code: for VSIX extension support'
+  'gnome-extensions-app: for GNOME Shell extension support'
+  'wine: for Windows application support'
+  'bottles: for Windows application support (recommended)'
+  'jre-openjdk: for JAR file support'
+  'debtap: for DEB package conversion (disabled by default)'
+  'rpm2arch: for RPM package conversion'
+)
+makedepends=('git')
+source=("git+https://github.com/clickpak/clickpak.git#tag=v${pkgver}")
+sha256sums=('SKIP')
+
+package() {
+  cd "${srcdir}/${pkgname}"
+  
+  # Install main script
+  install -Dm755 src/main.py "${pkgdir}/usr/bin/clickpak"
+  
+  # Install Python modules
+  install -dm755 "${pkgdir}/usr/lib/python3.13/site-packages/clickpak"
+  cp -r src/* "${pkgdir}/usr/lib/python3.13/site-packages/clickpak/"
+  
+  # Create wrapper script that sets Python path
+  cat > "${pkgdir}/usr/bin/clickpak" << 'EOF'
+#!/bin/sh
+export PYTHONPATH="/usr/lib/python3.13/site-packages/clickpak:${PYTHONPATH}"
+exec python3 -m clickpak.main "$@"
+EOF
+  chmod 755 "${pkgdir}/usr/bin/clickpak"
+  
+  # Install desktop file
+  install -Dm644 data/clickpak.desktop "${pkgdir}/usr/share/applications/clickpak.desktop"
+  
+  # Install metainfo
+  install -Dm644 data/clickpak.metainfo.xml "${pkgdir}/usr/share/metainfo/org.clickpak.Clickpak.metainfo.xml"
+  
+  # Install icon
+  install -Dm644 data/icons/clickpak.svg "${pkgdir}/usr/share/icons/hicolor/scalable/apps/clickpak.svg"
+  
+  # Install polkit policy
+  install -Dm644 data/polkit/org.clickpak.policy "${pkgdir}/usr/share/polkit-1/actions/org.clickpak.policy"
+  
+  # Install MIME types (handled by desktop file)
+  
+  # Install bash completion
+  install -dm755 "${pkgdir}/usr/share/bash-completion/completions"
+  cat > "${pkgdir}/usr/share/bash-completion/completions/clickpak" << 'EOF'
+_clickpak() {
+  local cur prev opts
+  COMPREPLY=()
+  cur="${COMP_WORDS[COMP_CWORD]}"
+  prev="${COMP_WORDS[COMP_CWORD-1]}"
+  opts="--config --version"
+  
+  if [[ ${cur} == -* ]]; then
+    COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
+    return 0
+  fi
+  
+  # Complete files with supported extensions
+  COMPREPLY=( $(compgen -f -X '!*.@(pkg.tar.zst|pkg.tar.xz|pkg.tar.gz|flatpakref|flatpak|AppImage|appimage|snap|vsix|run|sh|exe|msi|jar|tar.gz|tar.xz|zip|deb|rpm)' -- ${cur}) )
+}
+complete -F _clickpak clickpak
+EOF
+}
+
+# vim:set ts=2 sw=2 et:

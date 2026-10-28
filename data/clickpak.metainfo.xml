@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.clickpak.Clickpak</id>
+  <name>Clickpak</name>
+  <summary>Universal graphical installer for Linux</summary>
+  <description>
+    <p>Clickpak is a lightweight graphical installer for Linux. Double-click on package files
+    to install them without using the terminal.</p>
+    <p>Supported formats:</p>
+    <ul>
+      <li>Arch Linux packages (<code>.pkg.tar.zst</code>, <code>.pkg.tar.xz</code>)</li>
+      <li>Flatpak applications (<code>.flatpakref</code>, <code>.flatpak</code>)</li>
+      <li>AppImage applications (<code>.AppImage</code>)</li>
+      <li>Snap packages (<code>.snap</code>)</li>
+      <li>VS Code extensions (<code>.vsix</code>)</li>
+      <li>GNOME Shell extensions (<code>.shell-extension.zip</code>)</li>
+      <li>Java applications (<code>.jar</code>)</li>
+      <li>Installer scripts (<code>.run</code>, <code>.sh</code>)</li>
+      <li>Windows applications via Wine (<code>.exe</code>, <code>.msi</code>)</li>
+      <li>Arch build scripts (<code>PKGBUILD</code>)</li>
+      <li>Archives with heuristic installation (<code>.tar.gz</code>, <code>.zip</code>, etc.)</li>
+    </ul>
+    <p>Clickpak shows you exactly what command will be run before executing it,
+    and requires confirmation by default for safety.</p>
+  </description>
+  <project_license>GPL-3.0-or-later</project_license>
+  <developer_name>Clickpak Contributors</developer_name>
+  <url type="homepage">https://github.com/clickpak/clickpak</url>
+  <url type="bugtracker">https://github.com/clickpak/clickpak/issues</url>
+  <url type="help">https://github.com/clickpak/clickpak/wiki</url>
+  <url type="donate">https://github.com/sponsors/clickpak</url>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/clickpak/clickpak/main/docs/screenshot-main.png</image>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/clickpak/clickpak/main/docs/screenshot-confirm.png</image>
+    </screenshot>
+  </screenshots>
+  <releases>
+    <release version="0.1.0" date="2026-10-28">
+      <description>Initial prototype release</description>
+    </release>
+  </releases>
+  <provides>
+    <binary>clickpak</binary>
+  </provides>
+  <categories>
+    <category>System</category>
+    <category>PackageManager</category>
+    <category>Utility</category>
+  </categories>
+  <keywords>
+    <keyword>install</keyword>
+    <keyword>package</keyword>
+    <keyword>flatpak</keyword>
+    <keyword>appimage</keyword>
+    <keyword>arch</keyword>
+    <keyword>pacman</keyword>
+    <keyword>snap</keyword>
+  </keywords>
+  <content_rating type="oars-1.1" />
+</component>
