@@ -146,16 +146,16 @@ log "Exécution de linuxdeploy…"
 # WebKitGTK ne peut pas être embarqué correctement par linuxdeploy (processus
 # auxiliaires + données dans /usr/lib/webkit2gtk-4.1). On le retire de l'AppDir
 # pour que l'AppImage utilise le WebKitGTK du système (présent sur Arch).
-shopt -s nullglob
-REMOVED=0
-for f in "$APPDIR"/usr/lib/libwebkit2gtk-*.so* "$APPDIR"/usr/lib/libjavascriptcoregtk-*.so*; do
-  rm -f "$f"
-  REMOVED=$((REMOVED + 1))
-done
-shopt -u nullglob
-if [[ $REMOVED -gt 0 ]]; then
-  warn "WebKitGTK retiré de l'AppImage ($REMOVED fichiers) : dépendance système requise."
-fi
+# shopt -s nullglob
+# REMOVED=0
+# for f in "$APPDIR"/usr/lib/libwebkit2gtk-*.so* "$APPDIR"/usr/lib/libjavascriptcoregtk-*.so*; do
+#   rm -f "$f"
+#   REMOVED=$((REMOVED + 1))
+# done
+# shopt -u nullglob
+# if [[ $REMOVED -gt 0 ]]; then
+#   warn "WebKitGTK retiré de l'AppImage ($REMOVED fichiers) : dépendance système requise."
+# fi
 
 # ---------------------------------------------------------------------------
 # 5. Récupération du résultat

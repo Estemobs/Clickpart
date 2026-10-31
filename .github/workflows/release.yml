@@ -42,7 +42,9 @@ jobs:
         run: npm install
 
       - name: Build AppImage
-        run: npm run appimage
+        run: |
+          chmod +x packaging/appimage/build-appimage.sh
+          npm run appimage
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
