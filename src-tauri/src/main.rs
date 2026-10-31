@@ -23,6 +23,8 @@ pub struct FileInfo {
     pub description: String,
     pub needs_root: bool,
     pub supported: bool,
+    pub distro_compatible: bool,
+    pub distro_notes: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -68,11 +70,13 @@ struct LogLine {
 pub struct ToolInfo {
     pub name: String,
     pub available: bool,
+    pub relevant: bool,
 }
 
 #[derive(Serialize, Clone, Debug)]
 pub struct SystemInfo {
     pub distro: String,
+    pub distro_family: String,
     pub kernel: String,
     pub tools: Vec<ToolInfo>,
 }
@@ -259,10 +263,10 @@ fn spawn_detached(program: &str, args: &[String]) -> Result<(), String> {
 }
 
 // ---------------------------------------------------------------------------
-// Detection de format
+// Detection de format avec compatibilité par distribution
 // ---------------------------------------------------------------------------
 
-fn detect_inner(path: &str) -> Result<FileInfo, String> {
+fn detect_inner(path: &str, is_arch: bool, is_debian: bool, is_fedora: bool) -> Result<FileInfo, String> {
     let p = Path::new(path);
     let meta = fs::metadata(p).map_err(|e| format!("Fichier introuvable : {}", e))?;
     let name = p
@@ -273,7 +277,7 @@ fn detect_inner(path: &str) -> Result<FileInfo, String> {
     let lower = name.to_lowercase();
     let is_dir = meta.is_dir();
 
-    let (format, label, description, needs_root, supported) = if is_dir {
+    let (format, label, description, needs_root, supported, compatible, notes) = if is_dir {
         if p.join("PKGBUILD").is_file() {
             (
                 "pkgbuild",
@@ -281,6 +285,8 @@ fn detect_inner(path: &str) -> Result<FileInfo, String> {
                 "Compile le paquet avec makepkg puis l'installe avec pacman.",
                 true,
                 true,
+                is_arch,
+                if is_arch { None } else { Some("PKGBUILD uniquement pour Arch-based".into()) },
             )
         } else {
             (
@@ -289,6 +295,8 @@ fn detect_inner(path: &str) -> Result<FileInfo, String> {
                 "Ce dossier ne contient pas de PKGBUILD.",
                 false,
                 false,
+                false,
+                None,
             )
         }
     } else if lower == "pkgbuild" || lower.starts_with("pkgbuild") {
@@ -298,6 +306,8 @@ fn detect_inner(path: &str) -> Result<FileInfo, String> {
             "Compile le paquet avec makepkg puis l'installe avec pacman.",
             true,
             true,
+            is_arch,
+            if is_arch { None } else { Some("PKGBUILD uniquement pour Arch-based".into()) },
         )
     } else if lower.ends_with(".pkg.tar.zst")
         || lower.ends_with(".pkg.tar.xz")
@@ -312,6 +322,8 @@ fn detect_inner(path: &str) -> Result<FileInfo, String> {
             "Installe le paquet avec pacman -U (authentification administrateur requise).",
             true,
             true,
+            is_arch,
+            if is_arch { None } else { Some("pacman uniquement pour Arch-based".into()) },
         )
     } else if lower.ends_with(".appimage") {
         (
@@ -320,6 +332,8 @@ fn detect_inner(path: &str) -> Result<FileInfo, String> {
             "Copie l'AppImage dans ~/.local/bin et crée une entrée de menu.",
             false,
             true,
+            true,
+            None,
         )
     } else if lower.ends_with(".flatpakref") {
         (
@@ -328,6 +342,8 @@ fn detect_inner(path: &str) -> Result<FileInfo, String> {
             "Installe l'application depuis sa référence Flatpak.",
             false,
             true,
+            true,
+            None,
         )
     } else if lower.ends_with(".flatpak") {
         (
@@ -336,6 +352,8 @@ fn detect_inner(path: &str) -> Result<FileInfo, String> {
             "Installe le bundle Flatpak local.",
             false,
             true,
+            true,
+            None,
         )
     } else if lower.ends_with(".tar.zst")
         || lower.ends_with(".tar.xz")
@@ -354,6 +372,8 @@ fn detect_inner(path: &str) -> Result<FileInfo, String> {
             "Extrait l'archive dans ~/.local/opt et crée une entrée de menu si possible.",
             false,
             true,
+            true,
+            None,
         )
     } else if lower.ends_with(".jar") {
         (
@@ -362,6 +382,8 @@ fn detect_inner(path: &str) -> Result<FileInfo, String> {
             "Lance l'application avec java -jar.",
             false,
             true,
+            true,
+            None,
         )
     } else if lower.ends_with(".vsix") {
         (
@@ -370,6 +392,8 @@ fn detect_inner(path: &str) -> Result<FileInfo, String> {
             "Installe l'extension avec code --install-extension.",
             false,
             true,
+            true,
+            None,
         )
     } else if lower.ends_with(".run") {
         (
@@ -378,6 +402,8 @@ fn detect_inner(path: &str) -> Result<FileInfo, String> {
             "Script interactif : Clickpak ne peut pas le piloter sans terminal.",
             true,
             false,
+            true,
+            Some("Installation manuelle requise".into()),
         )
     } else if lower.ends_with(".exe") || lower.ends_with(".msi") {
         (
@@ -386,6 +412,8 @@ fn detect_inner(path: &str) -> Result<FileInfo, String> {
             "Lance l'installeur avec Wine.",
             false,
             true,
+            true,
+            None,
         )
     } else if lower.ends_with(".deb") {
         (
@@ -394,6 +422,8 @@ fn detect_inner(path: &str) -> Result<FileInfo, String> {
             "Format Debian : non installable directement sur Arch Linux.",
             true,
             false,
+            is_debian,
+            if is_debian { None } else { Some("Format Debian incompatible avec Arch-based".into()) },
         )
     } else if lower.ends_with(".rpm") {
         (
@@ -402,6 +432,18 @@ fn detect_inner(path: &str) -> Result<FileInfo, String> {
             "Format RPM : non installable directement sur Arch Linux.",
             true,
             false,
+            is_fedora,
+            if is_fedora { None } else { Some("Format RPM incompatible avec Fedora/Red Hat-based".into()) },
+        )
+    } else if lower.ends_with(".snap") {
+        (
+            "snap",
+            "Bundle Snap",
+            "Format Snap : non installable directement sur Arch Linux.",
+            true,
+            false,
+            false,
+            Some("Format Snap non compatible avec Arch Linux".into()),
         )
     } else {
         (
@@ -410,6 +452,8 @@ fn detect_inner(path: &str) -> Result<FileInfo, String> {
             "Clickpak ne reconnaît pas ce type de fichier.",
             false,
             false,
+            false,
+            None,
         )
     };
 
@@ -422,22 +466,14 @@ fn detect_inner(path: &str) -> Result<FileInfo, String> {
         description: description.into(),
         needs_root,
         supported,
+        distro_compatible: compatible,
+        distro_notes: notes,
     })
 }
 
 #[tauri::command]
 fn detect_format(path: String) -> Result<FileInfo, String> {
-    detect_inner(&path)
-}
-
-#[tauri::command]
-fn startup_file() -> Option<String> {
-    std::env::args().skip(1).find(|a| !a.starts_with('-'))
-}
-
-#[tauri::command]
-fn system_info() -> SystemInfo {
-    let distro = fs::read_to_string("/etc/os-release")
+    let distro_raw = fs::read_to_string("/etc/os-release")
         .ok()
         .and_then(|s| {
             s.lines()
@@ -446,33 +482,107 @@ fn system_info() -> SystemInfo {
         })
         .unwrap_or_else(|| "Linux".into());
 
+    let id_like = fs::read_to_string("/etc/os-release")
+        .ok()
+        .and_then(|s| {
+            s.lines()
+                .find(|l| l.starts_with("ID_LIKE=") || l.starts_with("ID="))
+                .map(|l| l.split('=').nth(1).unwrap_or("").trim_matches('"').to_lowercase())
+        })
+        .unwrap_or_default();
+
+    let is_arch = distro_raw.to_lowercase().contains("arch")
+        || distro_raw.to_lowercase().contains("cachyos")
+        || distro_raw.to_lowercase().contains("endeavour")
+        || distro_raw.to_lowercase().contains("manjaro")
+        || distro_raw.to_lowercase().contains("garuda")
+        || id_like.contains("arch");
+
+    let is_debian = distro_raw.to_lowercase().contains("debian")
+        || distro_raw.to_lowercase().contains("ubuntu")
+        || distro_raw.to_lowercase().contains("mint")
+        || distro_raw.to_lowercase().contains("kali")
+        || id_like.contains("debian");
+
+    let is_fedora = distro_raw.to_lowercase().contains("fedora")
+        || distro_raw.to_lowercase().contains("rhel")
+        || distro_raw.to_lowercase().contains("centos")
+        || id_like.contains("fedora") || id_like.contains("rhel");
+
+    detect_inner(&path, is_arch, is_debian, is_fedora)
+}
+
+#[tauri::command]
+fn system_info() -> SystemInfo {
+    let distro_raw = fs::read_to_string("/etc/os-release")
+        .ok()
+        .and_then(|s| {
+            s.lines()
+                .find(|l| l.starts_with("PRETTY_NAME="))
+                .map(|l| l.trim_start_matches("PRETTY_NAME=").trim_matches('"').to_string())
+        })
+        .unwrap_or_else(|| "Linux".into());
+
+    let id_like = fs::read_to_string("/etc/os-release")
+        .ok()
+        .and_then(|s| {
+            s.lines()
+                .find(|l| l.starts_with("ID_LIKE=") || l.starts_with("ID="))
+                .map(|l| l.split('=').nth(1).unwrap_or("").trim_matches('"').to_lowercase())
+        })
+        .unwrap_or_default();
+
+    let is_arch = distro_raw.to_lowercase().contains("arch")
+        || distro_raw.to_lowercase().contains("cachyos")
+        || distro_raw.to_lowercase().contains("endeavour")
+        || distro_raw.to_lowercase().contains("manjaro")
+        || distro_raw.to_lowercase().contains("garuda")
+        || id_like.contains("arch");
+
+    let is_debian = distro_raw.to_lowercase().contains("debian")
+        || distro_raw.to_lowercase().contains("ubuntu")
+        || distro_raw.to_lowercase().contains("mint")
+        || distro_raw.to_lowercase().contains("kali")
+        || id_like.contains("debian");
+
+    let is_fedora = distro_raw.to_lowercase().contains("fedora")
+        || distro_raw.to_lowercase().contains("rhel")
+        || distro_raw.to_lowercase().contains("centos")
+        || id_like.contains("fedora") || id_like.contains("rhel");
+
     let kernel = fs::read_to_string("/proc/sys/kernel/osrelease")
         .map(|s| s.trim().to_string())
         .unwrap_or_default();
 
     let tools = [
-        "pacman",
-        "pkexec",
-        "flatpak",
-        "makepkg",
-        "wine",
-        "java",
-        "code",
-        "gnome-extensions",
-        "tar",
-        "unzip",
-        "7z",
-        "xdg-open",
+        ("pacman", is_arch),
+        ("pkexec", true),
+        ("flatpak", true),
+        ("makepkg", is_arch),
+        ("wine", true),
+        ("java", true),
+        ("code", true),
+        ("gnome-extensions", true),
+        ("tar", true),
+        ("unzip", true),
+        ("7z", true),
+        ("xdg-open", true),
+        ("apt", is_debian),
+        ("dnf", is_fedora),
+        ("rpm", is_fedora || is_debian),
+        ("zypper", false),
     ]
     .iter()
-    .map(|t| ToolInfo {
+    .map(|(t, relevant)| ToolInfo {
         name: (*t).to_string(),
-        available: has_cmd(t),
+        available: if *relevant { has_cmd(t) } else { false },
+        relevant: *relevant,
     })
     .collect();
 
     SystemInfo {
-        distro,
+        distro: distro_raw,
+        distro_family: if is_arch { "arch".into() } else if is_debian { "debian".into() } else if is_fedora { "fedora".into() } else { "other".into() },
         kernel,
         tools,
     }
@@ -518,7 +628,6 @@ fn clear_history() -> Result<(), String> {
 }
 
 fn now_string() -> String {
-    // Horodatage simple, sans dependance externe.
     let output = Command::new("date").arg("+%Y-%m-%d %H:%M:%S").output();
     match output {
         Ok(o) => String::from_utf8_lossy(&o.stdout).trim().to_string(),
@@ -601,7 +710,6 @@ fn install_appimage(app: &AppHandle, path: &str) -> Result<InstallResult, String
         .map(|s| s.to_string_lossy().to_string())
         .unwrap_or_else(|| "clickpak-app".into());
 
-    // Icone : on tente d'extraire .DirIcon de l'AppImage.
     let mut icon_line = String::new();
     let tmp = std::env::temp_dir().join(format!("clickpak-icon-{}", std::process::id()));
     let _ = fs::create_dir_all(&tmp);
@@ -744,8 +852,7 @@ fn find_desktop_file(root: &Path) -> Option<PathBuf> {
         }
         if let Ok(entries) = fs::read_dir(&dir) {
             for entry in entries.flatten() {
-                let p = entry.path();
-                if p.is_dir() {
+                let p = entry.path();                if p.is_dir() {
                     stack.push(p);
                 } else if p.extension().map(|e| e == "desktop").unwrap_or(false) {
                     return Some(p);
@@ -982,6 +1089,7 @@ async fn install(app: AppHandle, path: String, format: String, scope: String) ->
             ),
             "deb" => Err("Les paquets .deb ne sont pas installables sur Arch Linux.".to_string()),
             "rpm" => Err("Les paquets .rpm ne sont pas installables sur Arch Linux.".to_string()),
+            "snap" => Err("Les paquets .snap ne sont pas installables sur Arch Linux.".to_string()),
             _ => Err("Format non pris en charge.".to_string()),
         }
     })
@@ -1013,7 +1121,6 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             detect_format,
-            startup_file,
             system_info,
             install,
             get_config,
