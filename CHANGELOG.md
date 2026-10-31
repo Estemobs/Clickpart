@@ -63,3 +63,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/fr/).
 [0.5.0]: https://github.com/clickpart/clickpart/releases/tag/v0.5.0
 [0.4.0]: https://github.com/clickpart/clickpart/releases/tag/v0.4.0
 [0.1.0]: https://github.com/clickpart/clickpart/releases/tag/v0.1.0
+
+## [0.6.0] - 2026-10-31
+
+### Fixed
+- GitHub Actions workflow: added missing system dependencies (`libglib2.0-dev`, etc.) to allow AppImage build on `ubuntu-latest`.
+- GitHub Actions workflow: corrected build step to use `npm run appimage`.
+- Updated `metainfo.xml` for correct release tracking.

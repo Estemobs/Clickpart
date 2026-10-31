@@ -38,6 +38,9 @@
     </screenshot>
   </screenshots>
   <releases>
+    <release version="0.6.0" date="2026-10-31">
+      <description>Fix build workflow, correct dependencies and packaging process.</description>
+    </release>
     <release version="0.1.0" date="2026-10-28">
       <description>Initial prototype release</description>
     </release>
