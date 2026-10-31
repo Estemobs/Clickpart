@@ -1,24 +1,627 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Clickpak</title>
-  <style>
-    body { font-family: system-ui, sans-serif; margin: 2rem; background: #fafafa; color: #333; }
-    .container { max-width: 600px; margin: 0 auto; }
-    .card { background: white; padding: 1.5rem; border-radius: 8px; margin-bottom: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    input, select, button { padding: 0.5rem; width: 100%; margin-top: 0.5rem; border: 1px solid #ddd; border-radius: 4px; }
-    button { padding: 0.7rem 1.2rem; background: #2563eb; color: white; border: none; cursor: pointer; }
-    button:hover { background: #1d4ed8; }
-    .status { margin-top: 1rem; padding: 0.5rem; border-radius: 4px; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Clickpak</title>
+<style>
+  :root {
+    --bg: #0e1116;
+    --bg-soft: #151a22;
+    --card: #1a202b;
+    --card-hover: #212938;
+    --line: #2a3444;
+    --text: #e8edf5;
+    --muted: #8d9bb0;
+    --accent: #4da3ff;
+    --accent-2: #7c5cff;
+    --ok: #3ddc97;
+    --warn: #ffb454;
+    --err: #ff6b6b;
+    --radius: 14px;
+    --mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    background:
+      radial-gradient(1000px 500px at 15% -10%, rgba(77,163,255,.18), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, rgba(124,92,255,.14), transparent 55%),
+      var(--bg);
+    color: var(--text);
+    font-size: 14px;
+  }
+  .app { max-width: 900px; margin: 0 auto; padding: 22px 24px 40px; }
+
+  header { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+  .logo {
+    width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    box-shadow: 0 6px 20px rgba(77,163,255,.35);
+    font-size: 22px;
+  }
+  header h1 { font-size: 19px; margin: 0; letter-spacing: .2px; }
+  header p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+  .sys { margin-left: auto; text-align: right; font-size: 11px; color: var(--muted); line-height: 1.5; }
+  .sys b { color: var(--text); font-weight: 600; }
+
+  nav { display: flex; gap: 6px; background: var(--bg-soft); padding: 5px; border-radius: 12px; margin-bottom: 18px; border: 1px solid var(--line); }
+  nav button {
+    flex: 1; background: transparent; border: 0; color: var(--muted); padding: 9px 12px;
+    border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: .15s;
+  }
+  nav button:hover { color: var(--text); }
+  nav button.active { background: var(--card); color: var(--text); box-shadow: 0 2px 8px rgba(0,0,0,.25); }
+
+  .view { display: none; }
+  .view.active { display: block; animation: fade .18s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+  .drop {
+    border: 2px dashed var(--line); border-radius: var(--radius); padding: 34px 20px; text-align: center;
+    background: linear-gradient(180deg, rgba(255,255,255,.02), transparent);
+    transition: .18s; cursor: pointer;
+  }
+  .drop:hover, .drop.hover { border-color: var(--accent); background: rgba(77,163,255,.06); }
+  .drop .icon { font-size: 34px; margin-bottom: 8px; }
+  .drop h2 { margin: 0 0 4px; font-size: 16px; }
+  .drop p { margin: 0; color: var(--muted); font-size: 12.5px; }
+
+  .row { display: flex; gap: 10px; margin-top: 14px; }
+  .btn {
+    border: 1px solid var(--line); background: var(--card); color: var(--text);
+    padding: 10px 16px; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: .15s; display: inline-flex; align-items: center; gap: 8px; justify-content: center;
+  }
+  .btn:hover { background: var(--card-hover); }
+  .btn.primary { background: linear-gradient(135deg, var(--accent), #3b7ee0); border-color: transparent; color: #fff; }
+  .btn.primary:hover { filter: brightness(1.08); }
+  .btn.danger { color: var(--err); border-color: rgba(255,107,107,.35); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn.grow { flex: 1; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 16px; margin-top: 14px;
+  }
+  .file-head { display: flex; align-items: flex-start; gap: 12px; }
+  .file-ico { font-size: 26px; }
+  .file-name { font-weight: 600; word-break: break-all; font-size: 14px; }
+  .file-meta { color: var(--muted); font-size: 12px; margin-top: 3px; word-break: break-all; }
+  .badge {
+    margin-left: auto; white-space: nowrap; font-size: 11px; font-weight: 700; padding: 5px 10px;
+    border-radius: 999px; background: rgba(77,163,255,.15); color: var(--accent); border: 1px solid rgba(77,163,255,.3);
+  }
+  .badge.warn { background: rgba(255,180,84,.14); color: var(--warn); border-color: rgba(255,180,84,.3); }
+  .badge.err { background: rgba(255,107,107,.14); color: var(--err); border-color: rgba(255,107,107,.3); }
+  .desc { color: var(--muted); font-size: 12.5px; margin-top: 12px; line-height: 1.55; }
+
+  label.field { display: block; margin-top: 14px; }
+  label.field span { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; font-weight: 600; }
+  select, input[type=text] {
+    width: 100%; background-color: var(--bg-soft); color: var(--text); border: 1px solid var(--line);
+    border-radius: 10px; padding: 10px 12px; font-size: 13px; outline: none;
+    -webkit-appearance: none; appearance: none;
+  }
+  select {
+    padding-right: 34px;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M2 4l4 4 4-4' fill='none' stroke='%238d9bb0' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+  }
+  select option { background: var(--card); color: var(--text); }
+  select:focus, input:focus { border-color: var(--accent); }
+
+  .log {
+    background: #0a0d12; border: 1px solid var(--line); border-radius: var(--radius);
+    height: 240px; overflow-y: auto; padding: 12px; font-family: var(--mono); font-size: 11.5px;
+    line-height: 1.6; margin-top: 14px; white-space: pre-wrap; word-break: break-word;
+  }
+  .log .l-stdout { color: #b9c7db; }
+  .log .l-stderr { color: #ff9b9b; }
+  .log .l-cmd { color: var(--accent); }
+  .log .l-phase { color: var(--warn); font-weight: 600; }
+  .log .empty { color: #4b586b; font-style: italic; }
+
+  .status { display: flex; align-items: center; gap: 10px; margin-top: 14px; font-size: 13px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: 0 0 auto; }
+  .dot.run { background: var(--accent); animation: pulse 1s infinite; }
+  .dot.ok { background: var(--ok); }
+  .dot.err { background: var(--err); }
+  @keyframes pulse { 50% { opacity: .3; } }
+
+  .history-item { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .history-item:last-child { border-bottom: 0; }
+  .history-item .h-ico { font-size: 18px; }
+  .history-item .h-file { font-weight: 600; font-size: 13px; word-break: break-all; }
+  .history-item .h-meta { color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+  .history-item .h-msg { color: var(--muted); font-size: 11.5px; margin-top: 4px; }
+  .empty-state { text-align: center; color: var(--muted); padding: 40px 10px; font-size: 13px; }
+
+  .switch { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 13px 0; border-bottom: 1px solid var(--line); }
+  .switch:last-of-type { border-bottom: 0; }
+  .switch .t { font-weight: 600; font-size: 13px; }
+  .switch .d { color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+  .toggle { width: 44px; height: 24px; border-radius: 999px; background: var(--line); position: relative; cursor: pointer; flex: 0 0 auto; transition: .18s; }
+  .toggle::after { content: ""; position: absolute; width: 18px; height: 18px; border-radius: 50%; background: #fff; top: 3px; left: 3px; transition: .18s; }
+  .toggle.on { background: var(--accent); }
+  .toggle.on::after { transform: translateX(20px); }
+
+  .modal-back {
+    position: fixed; inset: 0; background: rgba(4,7,12,.72); backdrop-filter: blur(4px);
+    display: none; align-items: center; justify-content: center; padding: 20px; z-index: 50;
+  }
+  .modal-back.show { display: flex; }
+  .modal {
+    background: var(--card); border: 1px solid var(--line); border-radius: 16px; max-width: 480px; width: 100%;
+    padding: 22px; box-shadow: 0 24px 70px rgba(0,0,0,.5);
+  }
+  .modal h3 { margin: 0 0 6px; font-size: 16px; }
+  .modal p { color: var(--muted); font-size: 12.5px; line-height: 1.6; margin: 0 0 14px; }
+  .modal .cmd { background: #0a0d12; border: 1px solid var(--line); border-radius: 10px; padding: 11px; font-family: var(--mono); font-size: 11.5px; color: #b9c7db; word-break: break-all; margin-bottom: 16px; }
+  .modal .actions { display: flex; gap: 10px; }
+
+  .toast {
+    position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--card); border: 1px solid var(--line); border-left: 3px solid var(--accent);
+    padding: 11px 16px; border-radius: 10px; font-size: 12.5px; opacity: 0; pointer-events: none;
+    transition: .22s; z-index: 60; max-width: 80vw; box-shadow: 0 10px 40px rgba(0,0,0,.4);
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.ok { border-left-color: var(--ok); }
+  .toast.err { border-left-color: var(--err); }
+  .toast.warn { border-left-color: var(--warn); }
+
+  .hint { font-size: 11.5px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
+  .sep { height: 1px; background: var(--line); margin: 16px 0; }
+  code { font-family: var(--mono); background: rgba(255,255,255,.06); padding: 1px 5px; border-radius: 4px; font-size: 11.5px; }
+</style>
 </head>
 <body>
-  <div class="container">
-    <h1>Clickpak</h1>
-    <p>Installeur graphique universel pour Linux</p>
-    <p>Version Tauri en cours de migration</p>
+<div class="app">
+  <header>
+    <div class="logo">📦</div>
+    <div>
+      <h1>Clickpak</h1>
+      <p>Installateur graphique universel pour Linux</p>
+    </div>
+    <div class="sys" id="sysInfo">
+      <b>Chargement…</b>
+    </div>
+  </header>
+
+  <nav>
+    <button data-view="install" class="active">Installer</button>
+    <button data-view="history">Historique</button>
+    <button data-view="settings">Réglages</button>
+  </nav>
+
+  <!-- ================= INSTALL ================= -->
+  <section class="view active" id="view-install">
+    <div class="drop" id="drop">
+      <div class="icon">📥</div>
+      <h2>Déposez un fichier ici</h2>
+      <p>ou cliquez pour parcourir vos fichiers</p>
+    </div>
+    <div class="row">
+      <button class="btn grow" id="pickBtn">📂 Choisir un fichier…</button>
+      <button class="btn" id="clearBtn" disabled>✕ Retirer</button>
+    </div>
+
+    <div class="card" id="fileCard" style="display:none">
+      <div class="file-head">
+        <div class="file-ico" id="fileIco">📄</div>
+        <div style="min-width:0">
+          <div class="file-name" id="fileName">—</div>
+          <div class="file-meta" id="fileMeta">—</div>
+        </div>
+        <div class="badge" id="fileBadge">—</div>
+      </div>
+      <div class="desc" id="fileDesc"></div>
+
+      <label class="field" id="scopeField">
+        <span>Portée de l'installation</span>
+        <select id="scope">
+          <option value="user">Utilisateur (~/.local) — sans mot de passe</option>
+          <option value="system">Système (tous les utilisateurs) — authentification requise</option>
+        </select>
+      </label>
+
+      <div class="row">
+        <button class="btn primary grow" id="installBtn">🚀 Installer</button>
+      </div>
+    </div>
+
+    <div class="status" id="statusBar" style="display:none">
+      <span class="dot" id="statusDot"></span>
+      <span id="statusText">Prêt</span>
+      <button class="btn" style="margin-left:auto;padding:5px 10px;font-size:11.5px" id="clearLogBtn">Effacer le journal</button>
+    </div>
+    <div class="log" id="log" style="display:none"><span class="empty">Le journal d'installation apparaîtra ici…</span></div>
+  </section>
+
+  <!-- ================= HISTORY ================= -->
+  <section class="view" id="view-history">
+    <div class="card" style="margin-top:0">
+      <div style="display:flex;align-items:center;gap:10px">
+        <h2 style="margin:0;font-size:15px">Historique des installations</h2>
+        <button class="btn danger" style="margin-left:auto;padding:6px 12px;font-size:12px" id="clearHistoryBtn">Vider</button>
+      </div>
+      <div id="historyList"><div class="empty-state">Aucune installation pour le moment.</div></div>
+    </div>
+  </section>
+
+  <!-- ================= SETTINGS ================= -->
+  <section class="view" id="view-settings">
+    <div class="card" style="margin-top:0">
+      <h2 style="margin:0 0 6px;font-size:15px">Réglages</h2>
+      <div class="switch">
+        <div>
+          <div class="t">Demander confirmation</div>
+          <div class="d">Afficher un récapitulatif avant chaque installation.</div>
+        </div>
+        <div class="toggle on" id="tgConfirm"></div>
+      </div>
+      <div class="switch">
+        <div>
+          <div class="t">Afficher le journal automatiquement</div>
+          <div class="d">Ouvre la console de sortie dès le début de l'installation.</div>
+        </div>
+        <div class="toggle on" id="tgLog"></div>
+      </div>
+      <div class="sep"></div>
+      <label class="field" style="margin-top:0">
+        <span>Portée préférée</span>
+        <select id="prefScope">
+          <option value="user">Utilisateur (~/.local)</option>
+          <option value="system">Système</option>
+        </select>
+      </label>
+      <div class="row">
+        <button class="btn primary" id="saveSettings">💾 Enregistrer</button>
+      </div>
+      <div class="hint">
+        Clickpak v0.6.0 — Tauri 2 / Rust. Les opérations système utilisent <code>pkexec</code> (polkit).
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 style="margin:0 0 10px;font-size:15px">Outils détectés</h2>
+      <div id="toolsList" class="hint">—</div>
+    </div>
+  </section>
+</div>
+
+<!-- ================= CONFIRM MODAL ================= -->
+<div class="modal-back" id="modal">
+  <div class="modal">
+    <h3>Confirmer l'installation</h3>
+    <p id="modalText">—</p>
+    <div class="cmd" id="modalCmd">—</div>
+    <div class="actions">
+      <button class="btn grow" id="modalCancel">Annuler</button>
+      <button class="btn primary grow" id="modalOk">Installer</button>
+    </div>
   </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const T = window.__TAURI__ || {};
+  const invoke = T.core ? T.core.invoke : async () => { throw new Error("API Tauri indisponible"); };
+  const listen = T.event ? T.event.listen : async () => {};
+  const dialogOpen = T.dialog ? T.dialog.open : null;
+
+  const $ = (id) => document.getElementById(id);
+  const state = {
+    file: null,
+    busy: false,
+    config: { confirm_before_install: true, open_log_automatically: true, preferred_scope: "user" },
+    system: null,
+  };
+
+  const icons = {
+    pacman: "🗃️", appimage: "🚀", flatpakref: "🫧", flatpak: "🫧",
+    archive: "🗜️", pkgbuild: "🔨", jar: "☕", vsix: "🧩",
+    windows: "🍷", run: "⚙️", deb: "📦", rpm: "📦", unknown: "❓",
+  };
+
+  function fmtSize(bytes) {
+    if (!bytes) return "—";
+    const u = ["o", "Ko", "Mo", "Go"];
+    let i = 0, n = bytes;
+    while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+    return `${n.toFixed(i === 0 ? 0 : 1)} ${u[i]}`;
+  }
+
+  function toast(msg, kind = "") {
+    const el = $("toast");
+    el.textContent = msg;
+    el.className = "toast show " + kind;
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.className = "toast " + kind; }, 4200);
+  }
+
+  function setStatus(text, kind = "") {
+    $("statusBar").style.display = "flex";
+    $("statusText").textContent = text;
+    $("statusDot").className = "dot " + kind;
+  }
+
+  function logLine(text, stream = "stdout") {
+    const log = $("log");
+    log.style.display = "block";
+    const empty = log.querySelector(".empty");
+    if (empty) empty.remove();
+    const span = document.createElement("span");
+    span.className = "l-" + stream;
+    span.textContent = text + "\n";
+    log.appendChild(span);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function clearLog() {
+    $("log").innerHTML = '<span class="empty">Le journal d\'installation apparaîtra ici…</span>';
+    $("statusBar").style.display = "none";
+  }
+
+  // ------------------------------- Navigation
+  document.querySelectorAll("nav button").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("nav button").forEach((b) => b.classList.remove("active"));
+      document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
+      btn.classList.add("active");
+      $("view-" + btn.dataset.view).classList.add("active");
+      if (btn.dataset.view === "history") renderHistory();
+    });
+  });
+
+  // ------------------------------- Selection de fichier
+  async function pickFile() {
+    if (!dialogOpen) { toast("Sélecteur de fichiers indisponible.", "err"); return; }
+    try {
+      const selected = await dialogOpen({
+        multiple: false,
+        directory: false,
+        title: "Choisir un fichier à installer",
+        filters: [
+          { name: "Paquets et applications", extensions: ["pkg.tar.zst", "pkg.tar.xz", "pkg.tar.gz", "AppImage", "flatpakref", "flatpak", "deb", "rpm", "jar", "vsix", "run", "exe", "msi"] },
+          { name: "Archives", extensions: ["zip", "7z", "tar", "gz", "xz", "zst", "bz2", "tgz"] },
+          { name: "Tous les fichiers", extensions: ["*"] },
+        ],
+      });
+      if (selected) loadFile(typeof selected === "string" ? selected : selected.path);
+    } catch (e) {
+      toast("Erreur du sélecteur : " + e, "err");
+    }
+  }
+
+  async function loadFile(path) {
+    if (!path) return;
+    try {
+      const info = await invoke("detect_format", { path });
+      state.file = info;
+      renderFile(info);
+      $("clearBtn").disabled = false;
+      clearLog();
+    } catch (e) {
+      toast(String(e), "err");
+    }
+  }
+
+  function renderFile(info) {
+    $("fileCard").style.display = "block";
+    $("fileIco").textContent = icons[info.format] || "📄";
+    $("fileName").textContent = info.name;
+    $("fileMeta").textContent = `${fmtSize(info.size)} · ${info.path}`;
+    const badge = $("fileBadge");
+    badge.textContent = info.label;
+    badge.className = "badge" + (info.supported ? "" : " err");
+    $("fileDesc").textContent = info.description;
+
+    const scopeField = $("scopeField");
+    const relevant = ["pacman", "flatpakref", "flatpak", "pkgbuild"].includes(info.format);
+    scopeField.style.display = relevant ? "block" : "none";
+    $("scope").value = state.config.preferred_scope || "user";
+
+    const btn = $("installBtn");
+    btn.disabled = !info.supported || state.busy;
+    btn.textContent = info.supported ? "🚀 Installer" : "⛔ Format non pris en charge";
+  }
+
+  function resetFile() {
+    state.file = null;
+    $("fileCard").style.display = "none";
+    $("clearBtn").disabled = true;
+    clearLog();
+  }
+
+  // ------------------------------- Installation
+  function askConfirm(info) {
+    return new Promise((resolve) => {
+      const modal = $("modal");
+      $("modalText").textContent = `${info.label} — ${info.name}. ${info.needs_root ? "Une authentification administrateur sera demandée." : "L'installation se fera dans votre dossier utilisateur."}`;
+      $("modalCmd").textContent = info.path;
+      modal.classList.add("show");
+
+      const done = (v) => {
+        modal.classList.remove("show");
+        $("modalOk").onclick = null;
+        $("modalCancel").onclick = null;
+        resolve(v);
+      };
+      $("modalOk").onclick = () => done(true);
+      $("modalCancel").onclick = () => done(false);
+    });
+  }
+
+  async function doInstall() {
+    const info = state.file;
+    if (!info || state.busy) return;
+
+    if (state.config.confirm_before_install) {
+      const ok = await askConfirm(info);
+      if (!ok) return;
+    }
+
+    state.busy = true;
+    $("installBtn").disabled = true;
+    $("pickBtn").disabled = true;
+    clearLog();
+    if (state.config.open_log_automatically) $("log").style.display = "block";
+    setStatus("Installation en cours…", "run");
+
+    try {
+      const res = await invoke("install", {
+        path: info.path,
+        format: info.format,
+        scope: $("scope").value,
+      });
+      if (res.success) {
+        setStatus("Installation réussie", "ok");
+        toast("Installation réussie ✔", "ok");
+        logLine("\n✔ " + res.message, "phase");
+      } else {
+        setStatus("Échec de l'installation", "err");
+        toast(res.message, "err");
+        logLine("\n✖ " + res.message, "phase");
+      }
+      if (res.details) logLine(res.details, "stdout");
+    } catch (e) {
+      setStatus("Échec de l'installation", "err");
+      toast(String(e), "err");
+      logLine("\n✖ " + e, "phase");
+    } finally {
+      state.busy = false;
+      $("installBtn").disabled = false;
+      $("pickBtn").disabled = false;
+      loadHistory();
+    }
+  }
+
+  // ------------------------------- Historique
+  async function loadHistory() {
+    try {
+      const entries = await invoke("get_history");
+      state.history = entries;
+      if ($("view-history").classList.contains("active")) renderHistory();
+    } catch (_) {}
+  }
+
+  function renderHistory() {
+    const list = $("historyList");
+    const entries = state.history || [];
+    if (!entries.length) {
+      list.innerHTML = '<div class="empty-state">Aucune installation pour le moment.</div>';
+      return;
+    }
+    list.innerHTML = "";
+    entries.forEach((e) => {
+      const row = document.createElement("div");
+      row.className = "history-item";
+      const ok = e.status === "success";
+      row.innerHTML = `
+        <div class="h-ico">${ok ? "✅" : "❌"}</div>
+        <div style="min-width:0">
+          <div class="h-file"></div>
+          <div class="h-meta"></div>
+          <div class="h-msg"></div>
+        </div>`;
+      row.querySelector(".h-file").textContent = e.file.split("/").pop();
+      row.querySelector(".h-meta").textContent = `${e.timestamp} · ${e.format}`;
+      row.querySelector(".h-msg").textContent = e.message;
+      list.appendChild(row);
+    });
+  }
+
+  // ------------------------------- Reglages
+  function renderConfig() {
+    $("tgConfirm").classList.toggle("on", !!state.config.confirm_before_install);
+    $("tgLog").classList.toggle("on", !!state.config.open_log_automatically);
+    $("prefScope").value = state.config.preferred_scope || "user";
+  }
+
+  async function saveSettings() {
+    state.config = {
+      confirm_before_install: $("tgConfirm").classList.contains("on"),
+      open_log_automatically: $("tgLog").classList.contains("on"),
+      preferred_scope: $("prefScope").value,
+    };
+    try {
+      await invoke("save_config", { config: state.config });
+      toast("Réglages enregistrés.", "ok");
+    } catch (e) {
+      toast(String(e), "err");
+    }
+  }
+
+  // ------------------------------- Systeme
+  async function loadSystem() {
+    try {
+      const sys = await invoke("system_info");
+      state.system = sys;
+      $("sysInfo").innerHTML = `<b>${sys.distro}</b><br>noyau ${sys.kernel}`;
+      const tools = sys.tools.map((t) =>
+        `<span style="color:${t.available ? "var(--ok)" : "var(--err)"}">${t.available ? "●" : "○"} ${t.name}</span>`
+      ).join(" &nbsp; ");
+      $("toolsList").innerHTML = tools;
+    } catch (e) {
+      $("sysInfo").textContent = "Système inconnu";
+    }
+  }
+
+  // ------------------------------- Events
+  $("pickBtn").addEventListener("click", pickFile);
+  $("drop").addEventListener("click", pickFile);
+  $("clearBtn").addEventListener("click", resetFile);
+  $("installBtn").addEventListener("click", doInstall);
+  $("clearLogBtn").addEventListener("click", clearLog);
+  $("saveSettings").addEventListener("click", saveSettings);
+  $("clearHistoryBtn").addEventListener("click", async () => {
+    try { await invoke("clear_history"); state.history = []; renderHistory(); toast("Historique vidé."); }
+    catch (e) { toast(String(e), "err"); }
+  });
+  $("tgConfirm").addEventListener("click", () => $("tgConfirm").classList.toggle("on"));
+  $("tgLog").addEventListener("click", () => $("tgLog").classList.toggle("on"));
+
+  // Drag & drop natif Tauri
+  if (T.webview && T.webview.getCurrentWebview) {
+    T.webview.getCurrentWebview().onDragDropEvent((event) => {
+      const p = event.payload;
+      if (p.type === "over" || p.type === "enter") $("drop").classList.add("hover");
+      else if (p.type === "leave") $("drop").classList.remove("hover");
+      else if (p.type === "drop" && p.paths && p.paths.length) {
+        $("drop").classList.remove("hover");
+        loadFile(p.paths[0]);
+      }
+    });
+  }
+
+  listen("install-log", (event) => {
+    const { stream, line } = event.payload;
+    logLine(line, stream);
+  });
+  listen("install-phase", (event) => setStatus(event.payload, "run"));
+
+  // ------------------------------- Init
+  (async function init() {
+    try { state.config = await invoke("get_config"); } catch (_) {}
+    renderConfig();
+    await loadSystem();
+    await loadHistory();
+    try {
+      const startup = await invoke("startup_file");
+      if (startup) loadFile(startup);
+    } catch (_) {}
+  })();
+})();
+</script>
 </body>
 </html>

@@ -7,3 +7,12 @@ build/
 .pytest_cache/
 .mypy_cache/
 locales/*/LC_MESSAGES/*.mo
+
+# Node / Tauri
+node_modules/
+package-lock.json
+src-tauri/target/
+src-tauri/gen/
+packaging/appimage/.tools/
+packaging/appimage/AppDir/
+packaging/appimage/*.AppImage

@@ -1,16 +1,18 @@
 {
-  "name": "clickpak-tauri",
-  "version": "0.1.0",
+  "name": "clickpak",
+  "version": "0.6.0",
   "private": true,
+  "description": "Installateur graphique universel pour Linux (Tauri)",
   "scripts": {
     "dev": "tauri dev",
-    "build": "tauri build",
-    "preview": "tauri preview"
+    "build": "tauri build --no-bundle",
+    "bundle": "tauri build --bundles appimage",
+    "appimage": "bash packaging/appimage/build-appimage.sh"
   },
   "dependencies": {
     "@tauri-apps/api": "^2"
   },
   "devDependencies": {
-    "tauri": "0.15.0"
+    "@tauri-apps/cli": "^2"
   }
 }
