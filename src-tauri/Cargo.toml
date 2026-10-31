@@ -1,5 +1,5 @@
 [package]
-name = "clickpak"
+name = "clickpart"
 version = "0.6.0"
 description = "Installateur graphique universel pour Linux"
 edition = "2021"
