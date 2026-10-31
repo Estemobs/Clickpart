@@ -1,4 +1,4 @@
-# Clickpak
+# Clickpart
 
 **Installeur graphique universel pour Linux : double-cliquez sur .flatpakref, .AppImage, .pkg.tar.zst et plus pour les installer.**
 
@@ -6,7 +6,7 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![GTK4](https://img.shields.io/badge/GTK-4-green.svg)](https://gtk.org/)
 
-Clickpak est une surcouche graphique légère autour des commandes d'installation natives de Linux. Il s'enregistre comme gestionnaire par défaut pour les types de fichiers de paquet, vous permettant d'installer n'importe quel fichier supporté par simple double-clic — sans terminal.
+Clickpart est une surcouche graphique légère autour des commandes d'installation natives de Linux. Il s'enregistre comme gestionnaire par défaut pour les types de fichiers de paquet, vous permettant d'installer n'importe quel fichier supporté par simple double-clic — sans terminal.
 
 ## Fonctionnalités
 
@@ -39,17 +39,17 @@ Clickpak est une surcouche graphique légère autour des commandes d'installatio
 
 ```bash
 # Version stable
-yay -S clickpak
+yay -S clickpart
 
 # Version git
-yay -S clickpak-git
+yay -S clickpart-git
 ```
 
 ### Depuis les Sources
 
 ```bash
-git clone https://github.com/clickpak/clickpak
-cd clickpak
+git clone https://github.com/clickpart/clickpart
+cd clickpart
 pip install -r requirements.txt  # ou utilisez les paquets de votre distribution
 python3 src/main.py --help
 ```
@@ -67,16 +67,16 @@ python3 src/main.py --help
 Double-cliquez simplement sur n'importe quel fichier supporté dans votre gestionnaire de fichiers, ou lancez depuis le terminal :
 
 ```bash
-clickpak paquet.pkg.tar.zst
-clickpak app.flatpakref
-clickpak application.AppImage
+clickpart paquet.pkg.tar.zst
+clickpart app.flatpakref
+clickpart application.AppImage
 ```
 
 ### Configuration
 
-Au premier lancement, Clickpak propose de devenir le gestionnaire par défaut pour les types de fichiers supportés.
+Au premier lancement, Clickpart propose de devenir le gestionnaire par défaut pour les types de fichiers supportés.
 
-Les réglages sont stockés dans `~/.config/clickpak/config.toml` :
+Les réglages sont stockés dans `~/.config/clickpart/config.toml` :
 
 ```toml
 [general]
@@ -93,17 +93,17 @@ appimage = { enabled = true, silent = true }
 
 ## Sécurité
 
-Clickpak suit les meilleures pratiques de sécurité :
+Clickpart suit les meilleures pratiques de sécurité :
 
 - **Confirmation par défaut** — vous voyez toujours ce qui va s'exécuter
 - **Pas d'interpolation shell** — commandes passées comme listes d'arguments, prévenant l'injection
 - **Intégration Polkit** — boîte de dialogue d'authentification standard, pas de `sudo` dans la GUI
-- **Journal d'audit complet** — chaque installation loguée dans `~/.local/state/clickpak/history.log`
+- **Journal d'audit complet** — chaque installation loguée dans `~/.local/state/clickpart/history.log`
 - **Avertissements pour formats risqués** — `.run`, `.sh`, `.exe` affichent des alertes visibles
 
 ## Pourquoi Pas Flatpak ?
 
-Clickpak **ne peut pas être distribué en Flatpak** car la sandbox l'empêcherait d'appeler les gestionnaires de paquets système (`pacman`, `snap`, etc.) ou d'écrire dans les répertoires hôtes comme `/usr` ou `~/Applications`. C'est une contrainte architecturale fondamentale — Clickpak doit s'exécuter sur l'hôte.
+Clickpart **ne peut pas être distribué en Flatpak** car la sandbox l'empêcherait d'appeler les gestionnaires de paquets système (`pacman`, `snap`, etc.) ou d'écrire dans les répertoires hôtes comme `/usr` ou `~/Applications`. C'est une contrainte architecturale fondamentale — Clickpart doit s'exécuter sur l'hôte.
 
 ## Contribuer
 

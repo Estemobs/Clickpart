@@ -1,4 +1,4 @@
-# Clickpak — État des lieux v0.4 / v0.5
+# Clickpart — État des lieux v0.4 / v0.5
 
 - Version : v0.4 (commit `0c8f726`) → v0.5 (commit `1f8239a`)
 - Structure : src/ (main, detect, backends, ui), tests/, data/, packaging/arch/
@@ -13,7 +13,7 @@
 - [x] Unit tests `detect.py` (`tests/test_detect.py`) — PASS (`detect_file` interface, `.flatpakref`, `.pkg.tar.zst`)
 - [x] `src/detect.py` — `detect_file()` wrapper; import `os` corrigé
 - [~] AppImage réel — téléchargé (`obsolete-appimagetool-AppImage`), backend install OK, `.desktop` `Exec=` absolu; `main.py` bloqué par `Adw` manquant (environnement Debian, non régressif)
-- [~] PKGBUILD local — `pkgver=0.5.0`, tarball local, install manuel `/tmp/clickpak-install` OK; `makepkg` impossible (pas d'Arch)
+- [~] PKGBUILD local — `pkgver=0.5.0`, tarball local, install manuel `/tmp/clickpart-install` OK; `makepkg` impossible (pas d'Arch)
 - [x] Docs / changelog — `CHANGELOG.md`, `TODO.md`, `docs/status-v0.4.md` mis à jour
 - [x] Task 4 (ce document) — commit + rapport
 
@@ -28,4 +28,4 @@
 - Backends modulaires, logique propre
 - `detect_file()` interface fixée pour tests
 - Besoin : tests sur backends (AppImage, flatpak, pkg.tar.zst)
-- Besoin : `__init__.py` au package root si wrapper module `python3 -m clickpak.main`
+- Besoin : `__init__.py` au package root si wrapper module `python3 -m clickpart.main`

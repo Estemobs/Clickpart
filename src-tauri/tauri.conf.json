@@ -29,7 +29,7 @@
     "targets": ["appimage"],
     "category": "Utility",
     "shortDescription": "Installateur graphique universel pour Linux",
-    "longDescription": "Clickpak installe vos fichiers .pkg.tar.zst, .AppImage, .flatpakref, archives et PKGBUILD depuis une interface graphique simple.",
+    "longDescription": "Clickpart installe vos fichiers .pkg.tar.zst, .AppImage, .flatpakref, archives et PKGBUILD depuis une interface graphique simple.",
     "icon": [
       "icons/clickpart-32x32.png",
       "icons/clickpart-128x128.png",

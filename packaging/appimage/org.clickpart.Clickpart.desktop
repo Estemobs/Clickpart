@@ -8,6 +8,6 @@ Terminal=false
 MimeType=application/x-flatpakref;application/x-flatpak;application/x-iso9660-appimage;application/vnd.visualstudio.code.extension;application/x-shellscript;application/x-executable;application/java-archive;application/x-deb;application/x-rpm;application/gzip;application/x-xz;application/zstd;application/x-bzip2;application/x-tar;application/zip;
 Categories=System;PackageManager;Utility;
 Keywords=install;package;flatpak;appimage;arch;pacman;clickpart;
-Icon=clickpart
+Icon=org.clickpart.Clickpart
 StartupNotify=true
 NoDisplay=false

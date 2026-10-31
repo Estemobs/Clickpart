@@ -2,11 +2,11 @@
 <!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
 "http://www.freedesktop.org/standards/PolicyKit/1.0/policyconfig.dtd">
 <policyconfig>
-  <vendor>Clickpak</vendor>
-  <vendor_url>https://github.com/clickpak/clickpak</vendor_url>
-  <icon_name>clickpak</icon_name>
+  <vendor>Clickpart</vendor>
+  <vendor_url>https://github.com/clickpart/clickpart</vendor_url>
+  <icon_name>clickpart</icon_name>
   
-  <action id="org.clickpak.install">
+  <action id="org.clickpart.install">
     <description>Install system packages</description>
     <description xml:lang="fr">Installer des paquets système</description>
     <message>Authentication is required to install system packages</message>
@@ -21,7 +21,7 @@
     <annotate key="org.freedesktop.policykit.exec.argv2">--noconfirm</annotate>
   </action>
   
-  <action id="org.clickpak.install.snap">
+  <action id="org.clickpart.install.snap">
     <description>Install Snap packages</description>
     <description xml:lang="fr">Installer des paquets Snap</description>
     <message>Authentication is required to install Snap packages</message>

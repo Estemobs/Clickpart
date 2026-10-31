@@ -1,6 +1,6 @@
-# Task 4 Report — Update docs / changelog (Clickpak v0.5)
+# Task 4 Report — Update docs / changelog (Clickpart v0.5)
 
-- Plan: Clickpak v0.5 (docs/superpowers/plans/2026-10-28-clickpak-v0.5.md)
+- Plan: Clickpart v0.5 (docs/superpowers/plans/2026-10-28-clickpart-v0.5.md)
 - Date: 2026-10-28
 - Constraint: Python 3, GPL-3; no destructive ops.
 

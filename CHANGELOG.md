@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Clickpak will be documented in this file.
+All notable changes to Clickpart will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/lang/fr/).
@@ -13,10 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/fr/).
 - Backends for `.pkg.tar.zst`, `.flatpakref`, `.AppImage`
 - Confirmation dialog with command preview
 - Progress dialog with real-time output
-- Configuration via TOML (`~/.config/clickpak/config.toml`)
+- Configuration via TOML (`~/.config/clickpart/config.toml`)
 - History logging (`~/.local/state/cickpak/history.log`)
 - Desktop integration (`.desktop`, MIME associations)
-- Polkit policy file (`org.clickpak.policy`)
+- Polkit policy file (`org.clickpart.policy`)
 - AUR package (`packaging/arch/PKGBUILD`)
 - English (`README.md`) and French (`README.fr.md`) documentation
 - `CONTRIBUTING.md` and `CODE_OF_CONDUCT.md`
@@ -34,7 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/fr/).
 ### Added
 - Unit tests for `detect.py`: `detect_file()` interface; `.flatpakref` and `.pkg.tar.zst` coverage (`tests/test_detect.py`)
 - Real `.AppImage` validation (`obsolete-appimagetool-AppImage`); backend install verified, `.desktop` `Exec=` absolute
-- Local PKGBUILD (`packaging/arch/PKGBUILD`) updated to `pkgver=0.5.0`; manual install verified (`/tmp/clickpak-install`)
+- Local PKGBUILD (`packaging/arch/PKGBUILD`) updated to `pkgver=0.5.0`; manual install verified (`/tmp/clickpart-install`)
 - `docs/status-v0.4.md` updated with v0.5 results
 
 ### Changed
@@ -52,7 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/fr/).
 
 ### Added
 - Hardening: polkit elevation locked, `.run` / `.sh` / `.exe` prominent warnings
-- History UI integration (`~/.local/state/clickpak/history.log`)
+- History UI integration (`~/.local/state/clickpart/history.log`)
 - Desktop integration finalized (`update-desktop-database` path documented)
 - AUR package (`packaging/arch/PKGBUILD`)
 
@@ -60,6 +60,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/fr/).
 - `.desktop` `Exec=` must be absolute (not relative)
 - `pkexec` container failure documented (expected, not a regression)
 
-[0.5.0]: https://github.com/clickpak/clickpak/releases/tag/v0.5.0
-[0.4.0]: https://github.com/clickpak/clickpak/releases/tag/v0.4.0
-[0.1.0]: https://github.com/clickpak/clickpak/releases/tag/v0.1.0
+[0.5.0]: https://github.com/clickpart/clickpart/releases/tag/v0.5.0
+[0.4.0]: https://github.com/clickpart/clickpart/releases/tag/v0.4.0
+[0.1.0]: https://github.com/clickpart/clickpart/releases/tag/v0.1.0

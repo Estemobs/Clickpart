@@ -98,13 +98,13 @@ fn xdg_dir(var: &str, fallback: &str) -> PathBuf {
 
 fn config_file() -> PathBuf {
     xdg_dir("XDG_CONFIG_HOME", ".config")
-        .join("clickpak")
+        .join("clickpart")
         .join("config.json")
 }
 
 fn history_file() -> PathBuf {
     xdg_dir("XDG_STATE_HOME", ".local/state")
-        .join("clickpak")
+        .join("clickpart")
         .join("history.json")
 }
 
@@ -399,7 +399,7 @@ fn detect_inner(path: &str, is_arch: bool, is_debian: bool, is_fedora: bool) -> 
         (
             "run",
             "Script d'installation .run",
-            "Script interactif : Clickpak ne peut pas le piloter sans terminal.",
+            "Script interactif : Clickpart ne peut pas le piloter sans terminal.",
             true,
             false,
             true,
@@ -449,7 +449,7 @@ fn detect_inner(path: &str, is_arch: bool, is_debian: bool, is_fedora: bool) -> 
         (
             "unknown",
             "Format inconnu",
-            "Clickpak ne reconnaît pas ce type de fichier.",
+            "Clickpart ne reconnaît pas ce type de fichier.",
             false,
             false,
             false,
@@ -708,10 +708,10 @@ fn install_appimage(app: &AppHandle, path: &str) -> Result<InstallResult, String
     let stem = dest
         .file_stem()
         .map(|s| s.to_string_lossy().to_string())
-        .unwrap_or_else(|| "clickpak-app".into());
+        .unwrap_or_else(|| "clickpart-app".into());
 
     let mut icon_line = String::new();
-    let tmp = std::env::temp_dir().join(format!("clickpak-icon-{}", std::process::id()));
+    let tmp = std::env::temp_dir().join(format!("clickpart-icon-{}", std::process::id()));
     let _ = fs::create_dir_all(&tmp);
     let extract = Command::new(&dest)
         .arg("--appimage-extract")
@@ -737,7 +737,7 @@ fn install_appimage(app: &AppHandle, path: &str) -> Result<InstallResult, String
     }
 
     let desktop = format!(
-        "[Desktop Entry]\nType=Application\nName={}\nComment=Installé par Clickpak\nExec=\"{}\" %f\n{}Terminal=false\nCategories=Utility;\n",
+        "[Desktop Entry]\nType=Application\nName={}\nComment=Installé par Clickpart\nExec=\"{}\" %f\n{}Terminal=false\nCategories=Utility;\n",
         stem,
         dest.to_string_lossy(),
         icon_line
@@ -1129,5 +1129,5 @@ fn main() {
             clear_history
         ])
         .run(tauri::generate_context!())
-        .expect("Erreur au lancement de Clickpak");
+        .expect("Erreur au lancement de Clickpart");
 }

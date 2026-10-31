@@ -1,4 +1,4 @@
-# Clickpak — TODO / Notes de la semaine 1
+# Clickpart — TODO / Notes de la semaine 1
 
 Conservé comme matière pour la doc, selon §13 de la feuille de route.
 

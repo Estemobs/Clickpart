@@ -1,10 +1,10 @@
-# Clickpak : feuille de route
+# Clickpart : feuille de route
 
 *Un installeur graphique universel pour Linux : tu double-cliques, ça s'installe.*
 
 ## 1. Vision
 
-Clickpak est un petit gestionnaire d'ouverture de fichiers pour Linux. Il s'enregistre comme application par défaut pour les formats d'installation (`.flatpakref`, `.AppImage`, `.pkg.tar.zst`, etc.). Quand tu double-cliques sur un fichier, il détecte le format, affiche (ou non) une fenêtre de confirmation, puis exécute **exactement la commande que tu taperais dans un terminal**. Il ne réinvente aucun gestionnaire de paquets : c'est une surcouche graphique fine.
+Clickpart est un petit gestionnaire d'ouverture de fichiers pour Linux. Il s'enregistre comme application par défaut pour les formats d'installation (`.flatpakref`, `.AppImage`, `.pkg.tar.zst`, etc.). Quand tu double-cliques sur un fichier, il détecte le format, affiche (ou non) une fenêtre de confirmation, puis exécute **exactement la commande que tu taperais dans un terminal**. Il ne réinvente aucun gestionnaire de paquets : c'est une surcouche graphique fine.
 
 **Principes directeurs**
 
@@ -16,11 +16,11 @@ Clickpak est un petit gestionnaire d'ouverture de fichiers pour Linux. Il s'enre
 
 ## 2. Nom et référencement GitHub
 
-**Nom retenu : Clickpak** (*click* + *pak*, comme *package*). Court, prononçable, évoque le double-clic.
+**Nom retenu : Clickpart** (*click* + *pak*, comme *package*). Court, prononçable, évoque le double-clic.
 
 **Alternatives** si le nom est pris : `Instapak`, `Unipak`, `Dblinstall`. Avant de te lancer, vérifie : le nom du dépôt sur GitHub, le nom du paquet sur l'AUR, et une recherche web rapide pour éviter les confusions.
 
-**Nom du dépôt** : `clickpak`
+**Nom du dépôt** : `clickpart`
 
 **Description GitHub (une ligne, riche en mots-clés)** :
 
@@ -49,7 +49,7 @@ Clickpak est un petit gestionnaire d'ouverture de fichiers pour Linux. Il s'enre
 **Hors périmètre (au moins pour la v1)**
 
 - Remplacer pacman, Flatpak ou un store graphique.
-- Gérer les mises à jour ou la désinstallation de façon complète (une vue « installé via Clickpak » viendra plus tard).
+- Gérer les mises à jour ou la désinstallation de façon complète (une vue « installé via Clickpart » viendra plus tard).
 - Résoudre les dépendances à la place du gestionnaire de paquets.
 - Garantir que n'importe quel `.tar.gz` s'installe (heuristique en best effort).
 
@@ -80,8 +80,8 @@ Clickpak est un petit gestionnaire d'ouverture de fichiers pour Linux. Il s'enre
 | Interface | **GTK4 + libadwaita** (via `gtk4-rs`) ; Qt en option plus tard | Rendu moderne, intégré à GNOME ; fonctionne correctement ailleurs. |
 | Élévation de droits | **polkit** (`pkexec`) | Fenêtre de mot de passe standard, pas de `sudo` dans une GUI. |
 | Association de fichiers | Fichier `.desktop` avec `MimeType=` + `xdg-mime default` | Mécanisme standard freedesktop. |
-| Config | Fichier TOML dans `~/.config/clickpak/config.toml` | Lisible, éditable à la main. |
-| Journal | `~/.local/state/clickpak/history.log` | Traçabilité de chaque installation. |
+| Config | Fichier TOML dans `~/.config/clickpart/config.toml` | Lisible, éditable à la main. |
+| Journal | `~/.local/state/clickpart/history.log` | Traçabilité de chaque installation. |
 
 **Conseil de démarrage** : fais un prototype Python + GTK4 en un week-end pour valider l'ergonomie, puis réécris le cœur en Rust si le projet prend.
 
@@ -97,8 +97,8 @@ Clickpak est un petit gestionnaire d'ouverture de fichiers pour Linux. Il s'enre
 
 ### 5.3 Flux d'une installation
 
-1. Double-clic sur un fichier, le système lance `clickpak %f`.
-2. Clickpak détecte le format et choisit le backend.
+1. Double-clic sur un fichier, le système lance `clickpart %f`.
+2. Clickpart détecte le format et choisit le backend.
 3. Selon la config : fenêtre de confirmation, ou installation directe pour les formats autorisés en mode silencieux.
 4. Élévation de droits via polkit si nécessaire.
 5. Exécution, progression affichée, notification de fin (« Installé, retrouve-le dans ton menu »).
@@ -107,7 +107,7 @@ Clickpak est un petit gestionnaire d'ouverture de fichiers pour Linux. Il s'enre
 ### 5.4 Structure du dépôt
 
 ```
-clickpak/
+clickpart/
 ├── src/
 │   ├── main.rs
 │   ├── detect.rs
@@ -120,8 +120,8 @@ clickpak/
 │   ├── ui/
 │   └── config.rs
 ├── data/
-│   ├── clickpak.desktop
-│   ├── clickpak.metainfo.xml
+│   ├── clickpart.desktop
+│   ├── clickpart.metainfo.xml
 │   ├── icons/
 │   └── polkit/
 ├── packaging/
@@ -138,7 +138,7 @@ clickpak/
 
 ## 6. Sécurité
 
-C'est le point le plus important : Clickpak lance des installations, parfois en root.
+C'est le point le plus important : Clickpart lance des installations, parfois en root.
 
 - **Confirmation par défaut** : un paquet peut exécuter des scripts en root à l'installation, donc l'utilisateur doit voir ce qui va se passer.
 - **Mode silencieux réservé aux formats sandboxés** (Flatpak, AppImage) tant que l'utilisateur ne l'active pas explicitement pour les autres.
@@ -183,13 +183,13 @@ Une archive ne contient pas d'instructions d'installation. Heuristique proposée
 ### Phase 2 : v0.2 « Utilisable par d'autres » (3 semaines)
 
 - [ ] Fenêtre de configuration : cases à cocher des formats, choix confirmation / silencieux par format.
-- [ ] Assistant au premier lancement (« Veux-tu que Clickpak soit l'application par défaut pour ces formats ? »).
+- [ ] Assistant au premier lancement (« Veux-tu que Clickpart soit l'application par défaut pour ces formats ? »).
 - [ ] Affichage de la progression en temps réel et gestion propre des erreurs (message clair + sortie brute dépliable).
 - [ ] Notifications de bureau à la fin de l'installation.
 - [ ] Intégration AppImage complète (icône extraite, `.desktop` généré, dossier configurable).
 - [ ] Détection des fichiers déjà installés (proposer « Réinstaller » plutôt que d'échouer).
 - [ ] Tests unitaires sur la détection et les backends (avec commandes simulées).
-- [ ] Publication sur l'**AUR** (`clickpak` et `clickpak-git`).
+- [ ] Publication sur l'**AUR** (`clickpart` et `clickpart-git`).
 
 ### Phase 3 : v0.3 « Plus de formats Arch » (3 semaines)
 
@@ -210,7 +210,7 @@ Une archive ne contient pas d'instructions d'installation. Heuristique proposée
 
 - [ ] `.exe` / `.msi` via Wine ou Bottles (détection de ce qui est installé).
 - [ ] `.jar` via Java.
-- [ ] Menu clic droit « Ouvrir avec Clickpak » pour les formats non associés par défaut.
+- [ ] Menu clic droit « Ouvrir avec Clickpart » pour les formats non associés par défaut.
 
 ### Phase 6 : v0.6 « L'archive qui résiste » (2 à 3 semaines)
 
@@ -231,17 +231,17 @@ Une archive ne contient pas d'instructions d'installation. Heuristique proposée
 
 - Support Qt/KDE natif (ou thème adaptatif).
 - Support d'autres distributions : `.deb` via `apt`/`dpkg`, `.rpm` via `dnf` (backends natifs sur ces distros).
-- Mode « ligne de commande » : `clickpak install fichier`.
-- Désinstallation et vue « applications installées via Clickpak ».
+- Mode « ligne de commande » : `clickpart install fichier`.
+- Désinstallation et vue « applications installées via Clickpart ».
 - Vérification de signatures et empreintes (SHA256 saisi ou lu depuis la page de téléchargement).
 - Système de plugins pour des backends communautaires.
 - Intégration navigateur (ouvrir directement après téléchargement).
 
 ## 9. Distribution
 
-- **AUR** en priorité (`clickpak`, `clickpak-bin`, `clickpak-git`).
+- **AUR** en priorité (`clickpart`, `clickpart-bin`, `clickpart-git`).
 - **Paquets natifs** pour d'autres distributions une fois le projet stable (`.deb`, `.rpm`, via CI).
-- **Attention** : Clickpak **ne peut pas être distribué en Flatpak** de façon utile, car la sandbox l'empêcherait d'appeler `pacman` ou d'écrire librement sur le système hôte. C'est une contrainte de conception à garder en tête et à expliquer dans le README.
+- **Attention** : Clickpart **ne peut pas être distribué en Flatpak** de façon utile, car la sandbox l'empêcherait d'appeler `pacman` ou d'écrire librement sur le système hôte. C'est une contrainte de conception à garder en tête et à expliquer dans le README.
 - **Releases GitHub** : binaires statiques et sources signées.
 
 ## 10. Qualité, tests et CI
@@ -272,7 +272,7 @@ Une archive ne contient pas d'instructions d'installation. Heuristique proposée
 
 ## 13. Premiers pas : la semaine 1
 
-1. Vérifier la disponibilité du nom *Clickpak* (GitHub, AUR, web).
+1. Vérifier la disponibilité du nom *Clickpart* (GitHub, AUR, web).
 2. Créer le dépôt, ajouter licence, README de vision, topics et description.
 3. Écrire un script minimal qui détecte l'extension d'un fichier et affiche une fenêtre GTK « Installer ce fichier ? ».
 4. Brancher le backend `.flatpakref` (le plus simple, sans root).

@@ -1,28 +1,28 @@
 #!/usr/bin/env bash
 # ---------------------------------------------------------------------------
-# Clickpak — construction d'une AppImage autonome avec linuxdeploy
+# Clickpart — construction d'une AppImage autonome avec linuxdeploy
 #            et le plugin linuxdeploy-plugin-gtk (GTK 3 / WebKitGTK).
 #
 # Usage :
 #   ./packaging/appimage/build-appimage.sh              # build + AppImage
 #   ./packaging/appimage/build-appimage.sh --rebuild    # force cargo build
 #   ./packaging/appimage/build-appimage.sh --no-download
-#   CLICKPAK_BUNDLE_GTK=0 ./packaging/appimage/build-appimage.sh
+#   CLICKPART_BUNDLE_GTK=0 ./packaging/appimage/build-appimage.sh
 #       -> n'embarque pas GTK (utilise le GTK du système)
 #
-# Sortie : dist/Clickpak-<version>-x86_64.AppImage
+# Sortie : dist/Clickpart-<version>-x86_64.AppImage
 # ---------------------------------------------------------------------------
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-APP_ID="org.clickpak.Clickpak"
-APP_NAME="Clickpak"
+APP_ID="org.clickpart.Clickpart"
+APP_NAME="Clickpart"
 ARCH="$(uname -m)"
 WORK="$ROOT/packaging/appimage"
 TOOLS="$WORK/.tools"
 APPDIR="$WORK/AppDir"
 DIST="$ROOT/dist"
-BIN="$ROOT/src-tauri/target/release/clickpak"
+BIN="$ROOT/src-tauri/target/release/clickpart"
 
 VERSION="$(sed -n 's/^[[:space:]]*"version":[[:space:]]*"\([^"]*\)".*/\1/p' "$ROOT/package.json" | head -n1)"
 VERSION="${VERSION:-0.6.0}"
@@ -38,9 +38,9 @@ for arg in "$@"; do
   esac
 done
 
-log()  { printf '\033[1;34m[clickpak]\033[0m %s\n' "$*"; }
-warn() { printf '\033[1;33m[clickpak]\033[0m %s\n' "$*"; }
-die()  { printf '\033[1;31m[clickpak]\033[0m %s\n' "$*" >&2; exit 1; }
+log()  { printf '\033[1;34m[clickpart]\033[0m %s\n' "$*"; }
+warn() { printf '\033[1;33m[clickpart]\033[0m %s\n' "$*"; }
+die()  { printf '\033[1;31m[clickpart]\033[0m %s\n' "$*" >&2; exit 1; }
 
 need() { command -v "$1" >/dev/null 2>&1 || die "Commande requise introuvable : $1"; }
 
@@ -112,12 +112,12 @@ mkdir -p \
   "$APPDIR/usr/share/icons/hicolor/256x256/apps" \
   "$APPDIR/usr/share/metainfo"
 
-install -m 0755 "$BIN" "$APPDIR/usr/bin/clickpak"
+install -m 0755 "$BIN" "$APPDIR/usr/bin/clickpart"
 install -m 0644 "$WORK/$APP_ID.desktop" "$APPDIR/usr/share/applications/$APP_ID.desktop"
-install -m 0644 "$ROOT/src-tauri/icons/128x128@2x.png" \
+install -m 0644 "$ROOT/src-tauri/icons/clickpart-128x128@2x.png" \
   "$APPDIR/usr/share/icons/hicolor/256x256/apps/$APP_ID.png"
-if [[ -f "$ROOT/data/clickpak.metainfo.xml" ]]; then
-  install -m 0644 "$ROOT/data/clickpak.metainfo.xml" \
+if [[ -f "$ROOT/data/clickpart.metainfo.xml" ]]; then
+  install -m 0644 "$ROOT/data/clickpart.metainfo.xml" \
     "$APPDIR/usr/share/metainfo/$APP_ID.metainfo.xml"
 fi
 
@@ -131,13 +131,13 @@ LD_ARGS=(
   --output appimage
 )
 
-if [[ "${CLICKPAK_BUNDLE_GTK:-1}" != "0" ]]; then
+if [[ "${CLICKPART_BUNDLE_GTK:-1}" != "0" ]]; then
   log "Déploiement GTK 3 via linuxdeploy-plugin-gtk…"
   export DEPLOY_GTK_VERSION=3
   export LINUXDEPLOY_PLUGIN_GTK="$GTK_PLUGIN"
   LD_ARGS+=(--plugin gtk)
 else
-  warn "Plugin GTK désactivé (CLICKPAK_BUNDLE_GTK=0) : GTK du système utilisé."
+  warn "Plugin GTK désactivé (CLICKPART_BUNDLE_GTK=0) : GTK du système utilisé."
 fi
 
 log "Exécution de linuxdeploy…"
@@ -160,10 +160,10 @@ fi
 # ---------------------------------------------------------------------------
 # 5. Récupération du résultat
 # ---------------------------------------------------------------------------
-BUILT="$(ls -1t "$WORK"/Clickpak*.AppImage "$WORK"/*.AppImage 2>/dev/null | head -n1 || true)"
+BUILT="$(ls -1t "$WORK"/Clickpart*.AppImage "$WORK"/*.AppImage 2>/dev/null | head -n1 || true)"
 [[ -n "${BUILT:-}" && -f "$BUILT" ]] || die "Aucune AppImage produite par linuxdeploy."
 
-OUT="$DIST/Clickpak-$VERSION-$ARCH.AppImage"
+OUT="$DIST/Clickpart-$VERSION-$ARCH.AppImage"
 mv -f "$BUILT" "$OUT"
 chmod +x "$OUT"
 
@@ -173,4 +173,4 @@ echo
 echo "Test rapide :"
 echo "  \"$OUT\" --appimage-extract-and-run"
 echo "Installation locale :"
-echo "  mkdir -p ~/.local/bin && cp \"$OUT\" ~/.local/bin/clickpak.AppImage"
+echo "  mkdir -p ~/.local/bin && cp \"$OUT\" ~/.local/bin/clickpart.AppImage"

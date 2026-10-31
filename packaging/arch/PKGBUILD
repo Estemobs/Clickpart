@@ -1,10 +1,10 @@
-# Maintainer: Clickpak Contributors
-pkgname=clickpak
+# Maintainer: Clickpart Contributors
+pkgname=clickpart
 pkgver=0.1.0
 pkgrel=1
 pkgdesc="Universal graphical installer for Linux: double-click .flatpakref, .AppImage, .pkg.tar.zst and more to install them"
 arch=('any')
-url="https://github.com/clickpak/clickpak"
+url="https://github.com/clickpart/clickpart"
 license=('GPL-3.0-or-later')
 depends=(
   'python'
@@ -29,45 +29,45 @@ optdepends=(
   'rpm2arch: for RPM package conversion'
 )
 makedepends=('git')
-source=("git+https://github.com/clickpak/clickpak.git#tag=v${pkgver}")
+source=("git+https://github.com/clickpart/clickpart.git#tag=v${pkgver}")
 sha256sums=('SKIP')
 
 package() {
   cd "${srcdir}/${pkgname}"
   
   # Install main script
-  install -Dm755 src/main.py "${pkgdir}/usr/bin/clickpak"
+  install -Dm755 src/main.py "${pkgdir}/usr/bin/clickpart"
   
   # Install Python modules
-  install -dm755 "${pkgdir}/usr/lib/python3.13/site-packages/clickpak"
-  cp -r src/* "${pkgdir}/usr/lib/python3.13/site-packages/clickpak/"
+  install -dm755 "${pkgdir}/usr/lib/python3.13/site-packages/clickpart"
+  cp -r src/* "${pkgdir}/usr/lib/python3.13/site-packages/clickpart/"
   
   # Create wrapper script that sets Python path
-  cat > "${pkgdir}/usr/bin/clickpak" << 'EOF'
+  cat > "${pkgdir}/usr/bin/clickpart" << 'EOF'
 #!/bin/sh
-export PYTHONPATH="/usr/lib/python3.13/site-packages/clickpak:${PYTHONPATH}"
-exec python3 -m clickpak.main "$@"
+export PYTHONPATH="/usr/lib/python3.13/site-packages/clickpart:${PYTHONPATH}"
+exec python3 -m clickpart.main "$@"
 EOF
-  chmod 755 "${pkgdir}/usr/bin/clickpak"
+  chmod 755 "${pkgdir}/usr/bin/clickpart"
   
   # Install desktop file
-  install -Dm644 data/clickpak.desktop "${pkgdir}/usr/share/applications/clickpak.desktop"
+  install -Dm644 data/clickpart.desktop "${pkgdir}/usr/share/applications/clickpart.desktop"
   
   # Install metainfo
-  install -Dm644 data/clickpak.metainfo.xml "${pkgdir}/usr/share/metainfo/org.clickpak.Clickpak.metainfo.xml"
+  install -Dm644 data/clickpart.metainfo.xml "${pkgdir}/usr/share/metainfo/org.clickpart.Clickpart.metainfo.xml"
   
   # Install icon
-  install -Dm644 data/icons/clickpak.svg "${pkgdir}/usr/share/icons/hicolor/scalable/apps/clickpak.svg"
+  install -Dm644 data/icons/clickpart.svg "${pkgdir}/usr/share/icons/hicolor/scalable/apps/clickpart.svg"
   
   # Install polkit policy
-  install -Dm644 data/polkit/org.clickpak.policy "${pkgdir}/usr/share/polkit-1/actions/org.clickpak.policy"
+  install -Dm644 data/polkit/org.clickpart.policy "${pkgdir}/usr/share/polkit-1/actions/org.clickpart.policy"
   
   # Install MIME types (handled by desktop file)
   
   # Install bash completion
   install -dm755 "${pkgdir}/usr/share/bash-completion/completions"
-  cat > "${pkgdir}/usr/share/bash-completion/completions/clickpak" << 'EOF'
-_clickpak() {
+  cat > "${pkgdir}/usr/share/bash-completion/completions/clickpart" << 'EOF'
+_clickpart() {
   local cur prev opts
   COMPREPLY=()
   cur="${COMP_WORDS[COMP_CWORD]}"
@@ -82,7 +82,7 @@ _clickpak() {
   # Complete files with supported extensions
   COMPREPLY=( $(compgen -f -X '!*.@(pkg.tar.zst|pkg.tar.xz|pkg.tar.gz|flatpakref|flatpak|AppImage|appimage|snap|vsix|run|sh|exe|msi|jar|tar.gz|tar.xz|zip|deb|rpm)' -- ${cur}) )
 }
-complete -F _clickpak clickpak
+complete -F _clickpart clickpart
 EOF
 }
 
