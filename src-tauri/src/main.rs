@@ -1,0 +1,1 @@
+use tauri::Manager; #[tauri::command] fn greet() { tauri::api::shell::open_url(tauri::api::webview::getWebviewWindow(null), Url::parse("https://example.com").unwrap()); } fn main() { tauri::Builder::default().setup(|app| Ok(())) .invoke_handler(tauri::generate_handler![]) .run(tauri::generate_context!()).expect("error running tauri application"); }

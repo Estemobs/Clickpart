@@ -1,0 +1,20 @@
+{
+  "productName": "Clickpak",
+  "version": "0.2.0",
+  "identifier": "com.clickpak.app",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devPath": "",
+    "index": "index.html"
+  },
+  "updater": false,
+  "allowlist": {
+    "all": false,
+    "shell": {
+      "open": ["xdg-open"],
+      "launch": ["/usr/bin/pacman", "/usr/bin/flatpak", "/usr/bin/makepkg"]
+    }
+  },
+  "bundle": { "active": false, "targets": "all" }
+}
