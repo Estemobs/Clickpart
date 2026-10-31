@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Clickpak",
+  "productName": "Clickpart",
   "version": "0.6.0",
-  "identifier": "org.clickpak.Clickpak",
+  "identifier": "org.clickpart.app",
   "build": {
     "frontendDist": "../src"
   },
@@ -11,7 +11,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Clickpak",
+        "title": "Clickpart",
         "width": 960,
         "height": 720,
         "minWidth": 760,
