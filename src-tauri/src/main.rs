@@ -513,6 +513,11 @@ fn detect_format(path: String) -> Result<FileInfo, String> {
 }
 
 #[tauri::command]
+fn startup_file() -> Option<String> {
+    std::env::args().skip(1).find(|arg| !arg.starts_with('-'))
+}
+
+#[tauri::command]
 fn system_info() -> SystemInfo {
     let distro_raw = fs::read_to_string("/etc/os-release")
         .ok()
@@ -1121,6 +1126,7 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             detect_format,
+            startup_file,
             system_info,
             install,
             get_config,
@@ -1130,4 +1136,73 @@ fn main() {
         ])
         .run(tauri::generate_context!())
         .expect("Erreur au lancement de Clickpart");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn temp_path(name: &str) -> PathBuf {
+        std::env::temp_dir().join(format!("clickpart-test-{}-{}", std::process::id(), name))
+    }
+
+    #[test]
+    fn sanitize_replaces_unsafe_characters() {
+        assert_eq!(sanitize("app image/1.0.AppImage"), "app_image_1.0.AppImage");
+        assert_eq!(sanitize("déjà-vu+ok"), "d_j_-vu+ok");
+    }
+
+    #[test]
+    fn detect_appimage_is_supported() {
+        let path = temp_path("sample.AppImage");
+        fs::write(&path, b"test").unwrap();
+
+        let info = detect_inner(path.to_str().unwrap(), true, false, false).unwrap();
+
+        assert_eq!(info.format, "appimage");
+        assert!(info.supported);
+        assert!(!info.needs_root);
+        assert_eq!(info.size, 4);
+        let _ = fs::remove_file(&path);
+    }
+
+    #[test]
+    fn detect_deb_is_incompatible_on_arch() {
+        let path = temp_path("sample.deb");
+        fs::write(&path, b"test").unwrap();
+
+        let info = detect_inner(path.to_str().unwrap(), true, false, false).unwrap();
+
+        assert_eq!(info.format, "deb");
+        assert!(!info.supported);
+        assert!(!info.distro_compatible);
+        assert!(info.distro_notes.is_some());
+        let _ = fs::remove_file(&path);
+    }
+
+    #[test]
+    fn detect_pkgbuild_directory() {
+        let dir = temp_path("pkgbuild-dir");
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join("PKGBUILD"), b"pkgname=test").unwrap();
+
+        let info = detect_inner(dir.to_str().unwrap(), true, false, false).unwrap();
+
+        assert_eq!(info.format, "pkgbuild");
+        assert!(info.supported);
+        assert!(info.needs_root);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn detect_unknown_extension() {
+        let path = temp_path("sample.unknown");
+        fs::write(&path, b"test").unwrap();
+
+        let info = detect_inner(path.to_str().unwrap(), true, false, false).unwrap();
+
+        assert_eq!(info.format, "unknown");
+        assert!(!info.supported);
+        let _ = fs::remove_file(&path);
+    }
 }

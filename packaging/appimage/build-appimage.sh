@@ -97,6 +97,14 @@ if grep -q 'find "$directory" \\( -type l -o -type f \\)' "$GTK_PLUGIN"; then
   log "Plugin GTK ajusté (recherche limitée à 2 niveaux)."
 fi
 
+# Le plugin relance linuxdeploy pour ses propres bibliothèques : sans nos
+# exclusions, cet appel interne réembarque WebKit (dépendance de l'exécutable
+# déjà présent dans l'AppDir). On propage donc les exclusions à ce relais.
+if grep -qF 'env LINUXDEPLOY_PLUGIN_MODE=1 "$LINUXDEPLOY"' "$GTK_PLUGIN"; then
+  sed -i 's|env LINUXDEPLOY_PLUGIN_MODE=1 "$LINUXDEPLOY" --appdir="$APPDIR" "${LIBRARIES\[@\]}"|env LINUXDEPLOY_PLUGIN_MODE=1 "$LINUXDEPLOY" --appdir="$APPDIR" --exclude-library "*libwebkit2gtk*" --exclude-library "*libjavascriptcoregtk*" "${LIBRARIES[@]}"|' "$GTK_PLUGIN"
+  log "Plugin GTK : exclusions WebKit propagées à l'appel interne."
+fi
+
 # linuxdeploy est lui-même une AppImage : on évite FUSE en l'extrayant.
 export APPIMAGE_EXTRACT_AND_RUN=1
 export PATH="$TOOLS:$PATH"
@@ -124,10 +132,19 @@ fi
 # ---------------------------------------------------------------------------
 # 4. linuxdeploy + plugin GTK
 # ---------------------------------------------------------------------------
+# WebKitGTK ne peut pas être embarqué correctement : la bibliothèque embarque
+# le chemin absolu de ses processus auxiliaires (WebKitNetworkProcess,
+# WebKitWebProcess, injected-bundle) tel qu'il était à la compilation. Une
+# AppImage construite sur Ubuntu les cherche donc dans
+# /usr/lib/x86_64-linux-gnu/webkit2gtk-4.1/, absent sur Arch/CachyOS.
+# On exclut WebKit pour utiliser celui du système, dont les chemins sont
+# cohérents avec la distribution de l'utilisateur.
 LD_ARGS=(
   --appdir "$APPDIR"
   --desktop-file "$APPDIR/usr/share/applications/$APP_ID.desktop"
   --icon-file "$APPDIR/usr/share/icons/hicolor/256x256/apps/$APP_ID.png"
+  --exclude-library "*libwebkit2gtk-*.so*"
+  --exclude-library "*libjavascriptcoregtk-*.so*"
   --output appimage
 )
 
@@ -143,22 +160,22 @@ fi
 log "Exécution de linuxdeploy…"
 ( cd "$WORK" && "$LD" "${LD_ARGS[@]}" )
 
-# WebKitGTK ne peut pas être embarqué correctement par linuxdeploy (processus
-# auxiliaires + données dans /usr/lib/webkit2gtk-4.1). On le retire de l'AppDir
-# pour que l'AppImage utilise le WebKitGTK du système (présent sur Arch).
-# shopt -s nullglob
-# REMOVED=0
-# for f in "$APPDIR"/usr/lib/libwebkit2gtk-*.so* "$APPDIR"/usr/lib/libjavascriptcoregtk-*.so*; do
-#   rm -f "$f"
-#   REMOVED=$((REMOVED + 1))
-# done
-# shopt -u nullglob
-# if [[ $REMOVED -gt 0 ]]; then
-#   warn "WebKitGTK retiré de l'AppImage ($REMOVED fichiers) : dépendance système requise."
-# fi
+# ---------------------------------------------------------------------------
+# 5. Vérification : WebKitGTK ne doit pas se retrouver dans l'AppImage
+# ---------------------------------------------------------------------------
+shopt -s nullglob
+BUNDLED_WEBKIT=(
+  "$APPDIR"/usr/lib/libwebkit2gtk-*.so*
+  "$APPDIR"/usr/lib/libjavascriptcoregtk-*.so*
+)
+shopt -u nullglob
+if [[ ${#BUNDLED_WEBKIT[@]} -gt 0 ]]; then
+  die "WebKitGTK a été embarqué malgré l'exclusion : ${BUNDLED_WEBKIT[*]}"
+fi
+log "WebKitGTK non embarqué : l'AppImage utilisera celui du système."
 
 # ---------------------------------------------------------------------------
-# 5. Récupération du résultat
+# 6. Récupération du résultat
 # ---------------------------------------------------------------------------
 BUILT="$(ls -1t "$WORK"/Clickpart*.AppImage "$WORK"/*.AppImage 2>/dev/null | head -n1 || true)"
 [[ -n "${BUILT:-}" && -f "$BUILT" ]] || die "Aucune AppImage produite par linuxdeploy."
