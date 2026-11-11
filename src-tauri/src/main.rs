@@ -2,11 +2,12 @@
 
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::io::{BufRead, BufReader, Read};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use tauri::{AppHandle, Emitter};
 
 // ---------------------------------------------------------------------------
@@ -64,7 +65,7 @@ impl Default for Config {
             preferred_scope: "user".into(),
             check_update: true,
             update_frequency: "weekly".into(),
-            update_source: "".into(),
+            update_source: "http://192.168.1.109:3000/api/v1/repos/estemobs/Clickpart/releases/latest".into(),
         }
     }
 }
@@ -650,6 +651,69 @@ fn open_url(url: String) -> Result<(), String> {
         .map_err(|e| format!("Impossible d'ouvrir l'URL : {}", e))
 }
 
+/// Telecharge le binaire de la derniere release, remplace l'executable
+/// en cours et relance l'application proprement.
+#[tauri::command]
+fn update_app(api_url: String) -> Result<(), String> {
+    let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+    let exe_dir = exe.parent().ok_or("Dossier de l'executable introuvable")?;
+
+    // Recuperer les infos de la release (pour trouver l'asset a telecharger)
+    let release: serde_json::Value = {
+        let resp = ureq::get(&api_url)
+            .call()
+            .map_err(|e| format!("Impossible de contacter l'API de release : {}", e))?;
+        serde_json::from_reader(resp.into_reader()).map_err(|e| e.to_string())?
+    };
+
+    let asset_url = release["assets"]
+        .as_array()
+        .and_then(|arr| {
+            arr.iter()
+                .find(|a| {
+                    a["name"]
+                        .as_str()
+                        .map_or(false, |n| n.ends_with(".AppImage") || n.ends_with(".AppImage.tar.gz"))
+                })
+                .or_else(|| arr.first())
+                .and_then(|a| a["browser_download_url"].as_str().map(String::from))
+        })
+        .ok_or("Aucun binaire de mise à jour trouve dans la release")?;
+
+    // Telecharger le nouveau binaire dans un fichier temporaire (meme dossier pour le rename)
+    let temp_name = format!(".clickpart-update-{}", std::process::id());
+    let temp_path = exe_dir.join(temp_name);
+    let resp = ureq::get(&asset_url)
+        .call()
+        .map_err(|e| format!("Echec du telechargement : {}", e))?;
+    let mut reader = resp.into_reader();
+    let mut file = std::fs::File::create(&temp_path).map_err(|e| e.to_string())?;
+    let mut buffer = [0u8; 8192];
+    loop {
+        match reader.read(&mut buffer) {
+            Ok(0) => break,
+            Ok(n) => file.write_all(&buffer[..n]).map_err(|e| e.to_string())?,
+            Err(e) => return Err(e.to_string()),
+        }
+    }
+    drop(file);
+    let _ = std::fs::set_permissions(&temp_path, std::fs::Permissions::from_mode(0o755));
+
+    // Remplacer l'executable en cours (sur Linux, le fichier ouvert reste valide)
+    std::fs::rename(&temp_path, &exe).map_err(|e| format!("Impossible de remplacer l'executable : {}", e))?;
+
+    // Relancer la nouvelle version puis fermer l'instance actuelle
+    let exe_for_spawn = exe.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(700));
+        let _ = std::process::Command::new(exe_for_spawn).spawn();
+        std::thread::sleep(Duration::from_millis(300));
+        std::process::exit(0);
+    });
+
+    Ok(())
+}
+
 fn now_string() -> String {
     let output = Command::new("date").arg("+%Y-%m-%d %H:%M:%S").output();
     match output {
@@ -1151,7 +1215,8 @@ fn main() {
             save_config,
             get_history,
             clear_history,
-            open_url
+            open_url,
+            update_app
         ])
         .run(tauri::generate_context!())
         .expect("Erreur au lancement de Clickpart");

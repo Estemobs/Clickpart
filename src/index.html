@@ -367,7 +367,7 @@
   const dialogOpen = T.dialog ? T.dialog.open : null;
 
   const $ = (id) => document.getElementById(id);
-  const APP_VERSION = "0.6.4";
+  const APP_VERSION = "0.6.6";
   const state = {
     file: null,
     busy: false,
@@ -650,19 +650,28 @@
       if (!tag) return;
       state.last_update_check = new Date().toISOString();
       if (isNewer(tag, APP_VERSION)) {
-        showUpdateModal(tag, body, url);
+        showUpdateModal(tag, body, url, source);
       }
     } catch (_) {}
   }
 
-  function showUpdateModal(tag, body, url) {
+  function showUpdateModal(tag, body, url, apiSource) {
     $("updateVersion").textContent = `Version ${tag} (actuelle : ${APP_VERSION})`;
     $("updateChangelog").textContent = body || "Aucun descriptif de version.";
     const back = $("updateModalBack");
     back.classList.add("show");
     const close = () => back.classList.remove("show");
     $("updateSkip").onclick = () => close();
-    $("updateInstall").onclick = () => { close(); if (url) invoke("open_url", { url }); };
+    $("updateInstall").textContent = `Installer la v${tag} et redémarrer`;
+    $("updateInstall").onclick = async () => {
+      close();
+      try {
+        await invoke("update_app", { api_url: apiSource });
+        toast("Mise à jour installée, redémarrage…", "ok");
+      } catch (e) {
+        toast("Echec de la mise à jour : " + e, "err");
+      }
+    };
     back.onclick = (e) => { if (e.target === back) close(); };
   }
 
