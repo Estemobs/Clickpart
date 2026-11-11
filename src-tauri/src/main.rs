@@ -65,7 +65,7 @@ impl Default for Config {
             preferred_scope: "user".into(),
             check_update: true,
             update_frequency: "weekly".into(),
-            update_source: "http://192.168.1.109:3000/api/v1/repos/estemobs/Clickpart/releases/latest".into(),
+            update_source: "https://github.com/Estemobs/Clickpart/releases/latest".into(),
         }
     }
 }
