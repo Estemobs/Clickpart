@@ -25,7 +25,7 @@ DIST="$ROOT/dist"
 BIN="$ROOT/src-tauri/target/release/clickpart"
 
 VERSION="$(sed -n 's/^[[:space:]]*"version":[[:space:]]*"\([^"]*\)".*/\1/p' "$ROOT/package.json" | head -n1)"
-VERSION="${VERSION:-0.6.0}"
+VERSION="${VERSION:-0.6.4}"
 
 REBUILD=0
 DOWNLOAD=1

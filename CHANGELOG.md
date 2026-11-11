@@ -5,6 +5,16 @@ All notable changes to Clickpart will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.6.4] - 2026-11-11
+
+### Fixed
+- AppImage : propagation de `--exclude-library` à l'appel interne du plugin GTK, qui réembarquait WebKitGTK malgré l'exclusion (crash `WebKitNetworkProcess`, issue #2)
+- AppImage : le build échoue désormais si WebKitGTK se retrouve dans l'AppDir
+- Ajout de la commande Tauri `startup_file`, appelée par le frontend mais absente du gestionnaire
+
+### Added
+- Tests unitaires sur `detect_inner` et `sanitize` (5 tests)
+
 ## [0.1.0] - 2026-10-28
 
 ### Added

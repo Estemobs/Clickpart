@@ -38,6 +38,9 @@
     </screenshot>
   </screenshots>
   <releases>
+    <release version="0.6.4" date="2026-11-11">
+      <description>Fix WebKitGTK bundling in the AppImage and add the missing startup_file command.</description>
+    </release>
     <release version="0.6.0" date="2026-10-31">
       <description>Fix build workflow, correct dependencies and packaging process.</description>
     </release>
