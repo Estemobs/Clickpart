@@ -178,6 +178,15 @@
   .hint { font-size: 11.5px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
   .sep { height: 1px; background: var(--line); margin: 16px 0; }
   code { font-family: var(--mono); background: rgba(255,255,255,.06); padding: 1px 5px; border-radius: 4px; font-size: 11.5px; }
+
+  progress { width: 100%; height: 6px; border-radius: 3px; border: none; background: var(--line); color: var(--accent); appearance: none; margin: 10px 0 0 0; }
+  progress::-webkit-progress-bar { background: var(--line); border-radius: 3px; }
+  progress::-webkit-progress-value { background: var(--accent); border-radius: 3px; }
+  progress::-moz-progress-bar { background: var(--accent); border-radius: 3px; }
+
+  .update-box { margin-top: 14px; padding: 12px; background: var(--bg-soft); border: 1px solid var(--line); border-radius: var(--radius); }
+  .update-box h4 { margin: 0 0 8px; font-size: 13px; color: var(--accent); }
+  .update-box .changelog { font-size: 12px; color: var(--muted); max-height: 150px; overflow-y: auto; margin-bottom: 10px; white-space: pre-wrap; }
 </style>
 </head>
 <body>
@@ -207,7 +216,6 @@
       <p>ou cliquez pour parcourir vos fichiers</p>
     </div>
     <div class="row">
-      <button class="btn grow" id="pickBtn">📂 Choisir un fichier…</button>
       <button class="btn" id="clearBtn" disabled>✕ Retirer</button>
     </div>
 
@@ -238,6 +246,7 @@
     <div class="status" id="statusBar" style="display:none">
       <span class="dot" id="statusDot"></span>
       <span id="statusText">Prêt</span>
+      <progress id="installProgress" style="display:none;flex:1;height:6px;margin:0 10px;"></progress>
       <button class="btn" style="margin-left:auto;padding:5px 10px;font-size:11.5px" id="clearLogBtn">Effacer le journal</button>
     </div>
     <div class="log" id="log" style="display:none"><span class="empty">Le journal d'installation apparaîtra ici…</span></div>
@@ -280,6 +289,31 @@
           <option value="system">Système</option>
         </select>
       </label>
+
+      <div class="update-box">
+        <h4>Mise à jour</h4>
+        <div class="switch">
+          <div>
+            <div class="t">Vérifier les mises à jour</div>
+            <div class="d">Cherche une nouvelle version sur la source configurée.</div>
+          </div>
+          <div class="toggle on" id="tgUpdate"></div>
+        </div>
+        <label class="field" style="margin-top:10px">
+          <span>Source de mise à jour (API releases)</span>
+          <input type="text" id="updateSource" placeholder="http://gitea/api/v1/repos/user/repo/releases/latest" />
+        </label>
+        <label class="field" style="margin-top:8px">
+          <span>Fréquence de vérification</span>
+          <select id="updateFreq">
+            <option value="never">Jamais</option>
+            <option value="daily">Quotidiennement</option>
+            <option value="weekly">Chaque semaine</option>
+            <option value="monthly">Chaque mois</option>
+          </select>
+        </label>
+      </div>
+
       <div class="row">
         <button class="btn primary" id="saveSettings">💾 Enregistrer</button>
       </div>
@@ -308,6 +342,19 @@
   </div>
 </div>
 
+<!-- ================= UPDATE MODAL ================= -->
+<div class="modal-back" id="updateModalBack">
+  <div class="modal">
+    <h3>Nouvelle version disponible</h3>
+    <div id="updateVersion" style="font-weight:600;margin-bottom:8px">—</div>
+    <div id="updateChangelog" class="changelog"></div>
+    <div class="actions">
+      <button class="btn grow" id="updateSkip">Ignorer</button>
+      <button class="btn primary grow" id="updateInstall">Voir la release</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -320,6 +367,7 @@
   const dialogOpen = T.dialog ? T.dialog.open : null;
 
   const $ = (id) => document.getElementById(id);
+  const APP_VERSION = "0.6.4";
   const state = {
     file: null,
     busy: false,
@@ -473,10 +521,10 @@
 
     state.busy = true;
     $("installBtn").disabled = true;
-    $("pickBtn").disabled = true;
     clearLog();
     if (state.config.open_log_automatically) $("log").style.display = "block";
     setStatus("Installation en cours…", "run");
+    $("installProgress").style.display = "";
 
     try {
       const res = await invoke("install", {
@@ -499,9 +547,9 @@
       toast(String(e), "err");
       logLine("\n✖ " + e, "phase");
     } finally {
+      $("installProgress").style.display = "none";
       state.busy = false;
       $("installBtn").disabled = false;
-      $("pickBtn").disabled = false;
       loadHistory();
     }
   }
@@ -546,20 +594,76 @@
     $("tgConfirm").classList.toggle("on", !!state.config.confirm_before_install);
     $("tgLog").classList.toggle("on", !!state.config.open_log_automatically);
     $("prefScope").value = state.config.preferred_scope || "user";
+    $("tgUpdate").classList.toggle("on", !!state.config.check_update);
+    $("updateSource").value = state.config.update_source || "";
+    $("updateFreq").value = state.config.update_frequency || "weekly";
   }
 
   async function saveSettings() {
-    state.config = {
-      confirm_before_install: $("tgConfirm").classList.contains("on"),
-      open_log_automatically: $("tgLog").classList.contains("on"),
-      preferred_scope: $("prefScope").value,
-    };
+    state.config.confirm_before_install = $("tgConfirm").classList.contains("on");
+    state.config.open_log_automatically = $("tgLog").classList.contains("on");
+    state.config.preferred_scope = $("prefScope").value;
+    state.config.check_update = $("tgUpdate").classList.contains("on");
+    state.config.update_source = $("updateSource").value;
+    state.config.update_frequency = $("updateFreq").value;
     try {
       await invoke("save_config", { config: state.config });
       toast("Réglages enregistrés.", "ok");
     } catch (e) {
       toast(String(e), "err");
     }
+  }
+
+  // ------------------------------- Mise à jour
+  const freqDays = { daily: 1, weekly: 7, monthly: 30 };
+
+  function parseVersion(v) {
+    return (v || "").replace(/^v/, "").split(".").map(Number);
+  }
+  function isNewer(a, b) {
+    const pa = parseVersion(a), pb = parseVersion(b);
+    for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+      const x = pa[i] || 0, y = pb[i] || 0;
+      if (x > y) return true;
+      if (x < y) return false;
+    }
+    return false;
+  }
+
+  async function checkForUpdate(force = false) {
+    if (!state.config.check_update) return;
+    const freq = state.config.update_frequency || "weekly";
+    if (freq === "never") return;
+    if (!force && state.last_update_check) {
+      const days = (Date.now() - new Date(state.last_update_check).getTime()) / 86400000;
+      if (days < (freqDays[freq] || 7)) return;
+    }
+    const source = (state.config.update_source || "").trim();
+    if (!source) return;
+    try {
+      const res = await fetch(source);
+      if (!res.ok) return;
+      const data = await res.json();
+      const tag = data.tag_name || data.name || "";
+      const url = data.html_url || source;
+      const body = data.body || "";
+      if (!tag) return;
+      state.last_update_check = new Date().toISOString();
+      if (isNewer(tag, APP_VERSION)) {
+        showUpdateModal(tag, body, url);
+      }
+    } catch (_) {}
+  }
+
+  function showUpdateModal(tag, body, url) {
+    $("updateVersion").textContent = `Version ${tag} (actuelle : ${APP_VERSION})`;
+    $("updateChangelog").textContent = body || "Aucun descriptif de version.";
+    const back = $("updateModalBack");
+    back.classList.add("show");
+    const close = () => back.classList.remove("show");
+    $("updateSkip").onclick = () => close();
+    $("updateInstall").onclick = () => { close(); if (url) invoke("open_url", { url }); };
+    back.onclick = (e) => { if (e.target === back) close(); };
   }
 
   // ------------------------------- Systeme
@@ -578,7 +682,6 @@
   }
 
   // ------------------------------- Events
-  $("pickBtn").addEventListener("click", pickFile);
   $("drop").addEventListener("click", pickFile);
   $("clearBtn").addEventListener("click", resetFile);
   $("installBtn").addEventListener("click", doInstall);
@@ -590,6 +693,7 @@
   });
   $("tgConfirm").addEventListener("click", () => $("tgConfirm").classList.toggle("on"));
   $("tgLog").addEventListener("click", () => $("tgLog").classList.toggle("on"));
+  $("tgUpdate").addEventListener("click", () => $("tgUpdate").classList.toggle("on"));
 
   // Drag & drop natif Tauri
   if (T.webview && T.webview.getCurrentWebview) {
@@ -616,6 +720,7 @@
     renderConfig();
     await loadSystem();
     await loadHistory();
+    await checkForUpdate();
     try {
       const startup = await invoke("startup_file");
       if (startup) loadFile(startup);

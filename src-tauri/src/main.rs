@@ -48,6 +48,12 @@ pub struct Config {
     pub confirm_before_install: bool,
     pub open_log_automatically: bool,
     pub preferred_scope: String,
+    #[serde(default)]
+    pub check_update: bool,
+    #[serde(default)]
+    pub update_frequency: String,
+    #[serde(default)]
+    pub update_source: String,
 }
 
 impl Default for Config {
@@ -56,6 +62,9 @@ impl Default for Config {
             confirm_before_install: true,
             open_log_automatically: true,
             preferred_scope: "user".into(),
+            check_update: true,
+            update_frequency: "weekly".into(),
+            update_source: "".into(),
         }
     }
 }
@@ -632,6 +641,15 @@ fn clear_history() -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+fn open_url(url: String) -> Result<(), String> {
+    std::process::Command::new("xdg-open")
+        .arg(&url)
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| format!("Impossible d'ouvrir l'URL : {}", e))
+}
+
 fn now_string() -> String {
     let output = Command::new("date").arg("+%Y-%m-%d %H:%M:%S").output();
     match output {
@@ -1132,7 +1150,8 @@ fn main() {
             get_config,
             save_config,
             get_history,
-            clear_history
+            clear_history,
+            open_url
         ])
         .run(tauri::generate_context!())
         .expect("Erreur au lancement de Clickpart");
