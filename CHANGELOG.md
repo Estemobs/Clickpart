@@ -5,6 +5,12 @@ All notable changes to Clickpart will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.6.9] - 2026-11-19
+
+### Fixed
+- Mise à jour automatique : la source par défaut pointe désormais sur l'API GitHub (`releases/latest`) et les anciennes URL de page HTML sont converties automatiquement
+- Mise à jour d'une AppImage : le fichier `.AppImage` lancé est remplacé via `$APPIMAGE`, au lieu du binaire dans le montage squashfs en lecture seule
+
 ## [0.6.8] - 2026-11-19
 
 ### Added

@@ -73,7 +73,7 @@ impl Default for Config {
             preferred_scope: "user".into(),
             check_update: true,
             update_frequency: "weekly".into(),
-            update_source: "https://github.com/Estemobs/Clickpart/releases/latest".into(),
+            update_source: "https://api.github.com/repos/Estemobs/Clickpart/releases/latest".into(),
         }
     }
 }
@@ -823,7 +823,12 @@ fn open_url(url: String) -> Result<(), String> {
 /// en cours et relance l'application proprement.
 #[tauri::command]
 fn update_app(api_url: String) -> Result<(), String> {
-    let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+    // En AppImage, current_exe() pointe vers le montage squashfs (lecture seule) :
+    // on remplace le fichier .AppImage lui-même via $APPIMAGE.
+    let exe = match std::env::var_os("APPIMAGE").map(PathBuf::from) {
+        Some(p) if p.is_file() => p,
+        _ => std::env::current_exe().map_err(|e| e.to_string())?,
+    };
     let exe_dir = exe.parent().ok_or("Dossier de l'executable introuvable")?;
 
     // Recuperer les infos de la release (pour trouver l'asset a telecharger)

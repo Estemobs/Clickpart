@@ -330,7 +330,7 @@
         <button class="btn primary" id="saveSettings">💾 Enregistrer</button>
       </div>
       <div class="hint">
-        Clickpart v0.6.8 — Tauri 2 / Rust. Les opérations système utilisent <code>pkexec</code> (polkit).
+        Clickpart v0.6.9 — Tauri 2 / Rust. Les opérations système utilisent <code>pkexec</code> (polkit).
       </div>
     </div>
 
@@ -379,7 +379,7 @@
   const dialogOpen = T.dialog ? T.dialog.open : null;
 
   const $ = (id) => document.getElementById(id);
-  const APP_VERSION = "0.6.8";
+  const APP_VERSION = "0.6.9";
   const state = {
     file: null,
     busy: false,
@@ -723,8 +723,13 @@
       const days = (Date.now() - new Date(state.last_update_check).getTime()) / 86400000;
       if (days < (freqDays[freq] || 7)) return;
     }
-    const source = (state.config.update_source || "").trim();
+    let source = (state.config.update_source || "").trim();
     if (!source) return;
+    // Ancienne valeur par défaut (page HTML) -> API GitHub.
+    source = source.replace(
+      /^https:\/\/github\.com\/([^/]+)\/([^/]+)\/releases(\/.*)?$/,
+      "https://api.github.com/repos/$1/$2/releases/latest"
+    );
     try {
       const res = await fetch(source);
       if (!res.ok) return;
