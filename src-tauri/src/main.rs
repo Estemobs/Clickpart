@@ -35,6 +35,14 @@ pub struct InstallResult {
     pub details: String,
 }
 
+#[derive(Serialize, Clone, Debug)]
+pub struct InstalledApp {
+    pub name: String,
+    pub exec: String,
+    pub desktop: String,
+    pub location: String,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct HistoryEntry {
     pub timestamp: String,
@@ -604,6 +612,166 @@ fn system_info() -> SystemInfo {
 }
 
 // ---------------------------------------------------------------------------
+// Applications installées par Clickpart (~/.local) et désinstallation
+// ---------------------------------------------------------------------------
+
+fn desktop_field(content: &str, key: &str) -> Option<String> {
+    content
+        .lines()
+        .find_map(|l| l.strip_prefix(key).map(|v| v.trim().to_string()))
+}
+
+fn exec_program(exec: &str) -> Option<String> {
+    let s = exec.trim();
+    let first = if let Some(rest) = s.strip_prefix('"') {
+        rest.split_once('"')?.0
+    } else if let Some(rest) = s.strip_prefix('\'') {
+        rest.split_once('\'')?.0
+    } else {
+        s.split_once(char::is_whitespace).map(|(f, _)| f).unwrap_or(s)
+    };
+    if first.is_empty() {
+        None
+    } else {
+        Some(first.to_string())
+    }
+}
+
+// Cible supprimable : uniquement ~/.local/bin (fichier) ou ~/.local/opt/<app>.
+fn confined_target(exec: &Path, opt: &Path, bin: &Path) -> Option<PathBuf> {
+    if exec.starts_with(bin) && exec.is_file() {
+        return Some(exec.to_path_buf());
+    }
+    if let Ok(rel) = exec.strip_prefix(opt) {
+        let dir = opt.join(rel.components().next()?.as_os_str());
+        if dir != opt && dir.is_dir() {
+            return Some(dir);
+        }
+    }
+    None
+}
+
+fn remove_path(path: &Path, removed: &mut Vec<String>, failed: &mut Vec<String>) {
+    if !path.exists() {
+        return;
+    }
+    let result = if path.is_dir() {
+        fs::remove_dir_all(path)
+    } else {
+        fs::remove_file(path)
+    };
+    match result {
+        Ok(_) => removed.push(path.display().to_string()),
+        Err(e) => failed.push(format!("{} : {}", path.display(), e)),
+    }
+}
+
+#[tauri::command]
+fn list_installed() -> Vec<InstalledApp> {
+    let opt = home().join(".local/opt");
+    let bin = home().join(".local/bin");
+    let mut apps = Vec::new();
+    let entries = match fs::read_dir(applications_dir()) {
+        Ok(e) => e,
+        Err(_) => return apps,
+    };
+    for entry in entries.flatten() {
+        let desktop = entry.path();
+        if desktop.extension().map(|e| e != "desktop").unwrap_or(true) {
+            continue;
+        }
+        let content = match fs::read_to_string(&desktop) {
+            Ok(c) => c,
+            Err(_) => continue,
+        };
+        let exec = match desktop_field(&content, "Exec=").and_then(|v| exec_program(&v)) {
+            Some(e) => PathBuf::from(e),
+            None => continue,
+        };
+        let location = match confined_target(&exec, &opt, &bin) {
+            Some(l) => l,
+            None => continue,
+        };
+        let name = desktop_field(&content, "Name=").unwrap_or_else(|| {
+            desktop
+                .file_stem()
+                .map(|s| s.to_string_lossy().to_string())
+                .unwrap_or_default()
+        });
+        apps.push(InstalledApp {
+            name,
+            exec: exec.to_string_lossy().to_string(),
+            desktop: desktop.to_string_lossy().to_string(),
+            location: location.to_string_lossy().to_string(),
+        });
+    }
+    apps.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    apps
+}
+
+#[tauri::command]
+fn uninstall_app(desktop: String) -> Result<InstallResult, String> {
+    let entry = PathBuf::from(&desktop);
+    if entry.parent() != Some(applications_dir().as_path())
+        || entry.extension().map(|e| e != "desktop").unwrap_or(true)
+    {
+        return Err("Chemin d'entrée de menu invalide.".into());
+    }
+    let content = fs::read_to_string(&entry).map_err(|_| "Entrée de menu introuvable.".to_string())?;
+    let exec = desktop_field(&content, "Exec=")
+        .and_then(|v| exec_program(&v))
+        .map(PathBuf::from)
+        .ok_or("Impossible de déterminer le programme à désinstaller.")?;
+    let target = confined_target(&exec, &home().join(".local/opt"), &home().join(".local/bin"))
+        .ok_or("Le programme associé est introuvable (déjà désinstallé ?).")?;
+
+    let mut removed = Vec::new();
+    let mut failed = Vec::new();
+    remove_path(&target, &mut removed, &mut failed);
+
+    if let Some(icon) = desktop_field(&content, "Icon=") {
+        let icon_path = if icon.starts_with('/') {
+            PathBuf::from(&icon)
+        } else {
+            icons_dir().join(format!("{}.png", icon))
+        };
+        if icon_path.starts_with(icons_dir()) {
+            remove_path(&icon_path, &mut removed, &mut failed);
+        }
+    }
+    remove_path(&entry, &mut removed, &mut failed);
+    let _ = Command::new("update-desktop-database")
+        .arg(applications_dir())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status();
+
+    let name = desktop_field(&content, "Name=").unwrap_or_else(|| {
+        entry
+            .file_stem()
+            .map(|s| s.to_string_lossy().to_string())
+            .unwrap_or_else(|| "Application".into())
+    });
+    let mut details = if removed.is_empty() {
+        "Aucun fichier supprimé.".to_string()
+    } else {
+        format!("Supprimé :\n{}", removed.join("\n"))
+    };
+    if !failed.is_empty() {
+        details.push_str(&format!("\nÉchecs :\n{}", failed.join("\n")));
+    }
+    Ok(InstallResult {
+        success: failed.is_empty(),
+        message: if failed.is_empty() {
+            format!("{} désinstallé.", name)
+        } else {
+            format!("Désinstallation de {} incomplète.", name)
+        },
+        details,
+    })
+}
+
+// ---------------------------------------------------------------------------
 // Configuration / historique
 // ---------------------------------------------------------------------------
 
@@ -950,6 +1118,86 @@ fn find_desktop_file(root: &Path) -> Option<PathBuf> {
     None
 }
 
+// Heuristique pour les archives sans .desktop : binaire principal à la racine.
+fn find_main_executable(root: &Path) -> Option<PathBuf> {
+    let hint = root
+        .file_name()
+        .map(|n| n.to_string_lossy().to_lowercase())
+        .unwrap_or_default();
+    let mut candidates: Vec<(String, PathBuf)> = Vec::new();
+    for entry in fs::read_dir(root).ok()?.flatten() {
+        let path = entry.path();
+        let name = match path.file_name() {
+            Some(n) => n.to_string_lossy().to_string(),
+            None => continue,
+        };
+        let lower = name.to_lowercase();
+        let is_exec = entry
+            .metadata()
+            .map(|m| m.is_file() && m.permissions().mode() & 0o111 != 0)
+            .unwrap_or(false);
+        if !is_exec
+            || name.starts_with('.')
+            || lower.starts_with("lib")
+            || lower.ends_with(".so")
+            || lower.ends_with(".sh")
+        {
+            continue;
+        }
+        candidates.push((lower, path));
+    }
+    // Le nom le plus proche de celui de l'archive, sinon le plus long.
+    candidates.sort_by_key(|(lower, _)| (hint.contains(lower), lower.len()));
+    candidates.pop().map(|(_, path)| path)
+}
+
+fn find_icon(root: &Path) -> Option<PathBuf> {
+    let mut stack = vec![(root.to_path_buf(), 0usize)];
+    while let Some((dir, depth)) = stack.pop() {
+        if depth > 3 {
+            continue;
+        }
+        let entries = match fs::read_dir(&dir) {
+            Ok(e) => e,
+            Err(_) => continue,
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                stack.push((path, depth + 1));
+                continue;
+            }
+            let ext = path
+                .extension()
+                .map(|e| e.to_string_lossy().to_lowercase())
+                .unwrap_or_default();
+            if ["png", "svg", "xpm"].contains(&ext.as_str()) {
+                return Some(path);
+            }
+        }
+    }
+    None
+}
+
+fn write_desktop_entry(name: &str, exec: &Path, icon: &str) -> Result<PathBuf, String> {
+    let apps = applications_dir();
+    fs::create_dir_all(&apps).map_err(|e| e.to_string())?;
+    let target = apps.join(format!("{}.desktop", sanitize(name)));
+    let content = format!(
+        "[Desktop Entry]\nType=Application\nName={}\nComment=Installé par Clickpart\nExec=\"{}\"\nIcon={}\nTerminal=false\nCategories=Utility;\n",
+        name,
+        exec.to_string_lossy(),
+        icon
+    );
+    fs::write(&target, content).map_err(|e| e.to_string())?;
+    let _ = Command::new("update-desktop-database")
+        .arg(&apps)
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status();
+    Ok(target)
+}
+
 fn install_archive(app: &AppHandle, path: &str) -> Result<InstallResult, String> {
     let src = Path::new(path);
     let stem = src
@@ -1011,6 +1259,22 @@ fn install_archive(app: &AppHandle, path: &str) -> Result<InstallResult, String>
         }
     }
 
+    if desktop_msg.is_empty() {
+        phase(app, "Création de l'entrée de menu…");
+        if let Some(bin) = find_main_executable(&dest) {
+            let name = bin
+                .file_name()
+                .map(|n| n.to_string_lossy().to_string())
+                .unwrap_or_else(|| stem.clone());
+            let icon = find_icon(&dest)
+                .map(|p| p.to_string_lossy().to_string())
+                .unwrap_or_else(|| "application-x-executable".into());
+            if let Ok(target) = write_desktop_entry(&name, &bin, &icon) {
+                desktop_msg = format!("\nEntrée de menu : {}", target.display());
+            }
+        }
+    }
+
     Ok(InstallResult {
         success: true,
         message: format!("Archive extraite dans {}.{}", dest.display(), desktop_msg),
@@ -1018,7 +1282,7 @@ fn install_archive(app: &AppHandle, path: &str) -> Result<InstallResult, String>
             "Dossier : {}\n{}",
             dest.display(),
             if desktop_msg.is_empty() {
-                "Aucun fichier .desktop trouvé : lancez le programme manuellement.".to_string()
+                "Aucun exécutable trouvé : lancez le programme manuellement.".to_string()
             } else {
                 desktop_msg.clone()
             }
@@ -1210,6 +1474,8 @@ fn main() {
             detect_format,
             startup_file,
             system_info,
+            list_installed,
+            uninstall_app,
             install,
             get_config,
             save_config,
@@ -1276,6 +1542,64 @@ mod tests {
         assert!(info.supported);
         assert!(info.needs_root);
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn find_main_executable_prefers_name_matching_archive() {
+        let dir = temp_path("unigetui-1.0");
+        fs::create_dir_all(dir.join("Assets")).unwrap();
+        for (name, mode) in [("uniget", 0o755), ("UniGetUI", 0o755), ("libSkiaSharp.so", 0o755), ("readme.txt", 0o644)] {
+            let p = dir.join(name);
+            fs::write(&p, b"x").unwrap();
+            fs::set_permissions(&p, fs::Permissions::from_mode(mode)).unwrap();
+        }
+
+        let found = find_main_executable(&dir).unwrap();
+        assert_eq!(found.file_name().unwrap(), "UniGetUI");
+
+        fs::remove_file(dir.join("UniGetUI")).unwrap();
+        assert_eq!(find_main_executable(&dir).unwrap().file_name().unwrap(), "uniget");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn find_icon_finds_nested_image() {
+        let dir = temp_path("icon-nested");
+        fs::create_dir_all(dir.join("Assets")).unwrap();
+        fs::write(dir.join("Assets/logo.png"), b"x").unwrap();
+
+        assert_eq!(find_icon(&dir).unwrap(), dir.join("Assets/logo.png"));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn exec_program_handles_quotes_and_field_codes() {
+        assert_eq!(
+            exec_program("\"/home/u/.local/bin/My App\" %f").as_deref(),
+            Some("/home/u/.local/bin/My App")
+        );
+        assert_eq!(exec_program("'/opt/x/y' --flag").as_deref(), Some("/opt/x/y"));
+        assert_eq!(exec_program("/usr/bin/foo --bar").as_deref(), Some("/usr/bin/foo"));
+        assert_eq!(desktop_field("[Desktop Entry]\nName=MyApp\n", "Name=").as_deref(), Some("MyApp"));
+    }
+
+    #[test]
+    fn confined_target_only_allows_clickpart_paths() {
+        let root = temp_path("confined");
+        let opt = root.join(".local/opt");
+        let bin = root.join(".local/bin");
+        fs::create_dir_all(opt.join("MyApp")).unwrap();
+        fs::create_dir_all(&bin).unwrap();
+        let app_bin = bin.join("myapp");
+        fs::write(&app_bin, b"x").unwrap();
+
+        assert_eq!(confined_target(&app_bin, &opt, &bin), Some(app_bin));
+        assert_eq!(
+            confined_target(&opt.join("MyApp/MyApp"), &opt, &bin),
+            Some(opt.join("MyApp"))
+        );
+        assert_eq!(confined_target(Path::new("/usr/bin/ls"), &opt, &bin), None);
+        let _ = fs::remove_dir_all(&root);
     }
 
     #[test]

@@ -5,6 +5,15 @@ All notable changes to Clickpart will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.6.8] - 2026-11-19
+
+### Added
+- Onglet « Applications » : détection des applications installées dans `~/.local` (via leurs entrées `.desktop`) et désinstallation propre (binaire, dossier `~/.local/opt`, icône et entrée de menu), avec confirmation
+- Création automatique d'une entrée de menu pour les archives qui n'en fournissent pas (binaire principal détecté à la racine, icône si disponible)
+
+### Fixed
+- Les archives sans fichier `.desktop` ne se contentent plus d'afficher « lancez le programme manuellement »
+
 ## [0.6.4] - 2026-11-11
 
 ### Fixed

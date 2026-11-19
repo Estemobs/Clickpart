@@ -204,6 +204,7 @@
 
   <nav>
     <button data-view="install" class="active">Installer</button>
+    <button data-view="apps">Applications</button>
     <button data-view="history">Historique</button>
     <button data-view="settings">Réglages</button>
   </nav>
@@ -250,6 +251,17 @@
       <button class="btn" style="margin-left:auto;padding:5px 10px;font-size:11.5px" id="clearLogBtn">Effacer le journal</button>
     </div>
     <div class="log" id="log" style="display:none"><span class="empty">Le journal d'installation apparaîtra ici…</span></div>
+  </section>
+
+  <!-- ================= INSTALLED APPS ================= -->
+  <section class="view" id="view-apps">
+    <div class="card" style="margin-top:0">
+      <div style="display:flex;align-items:center;gap:10px">
+        <h2 style="margin:0;font-size:15px">Applications installées par Clickpart</h2>
+        <button class="btn" style="margin-left:auto;padding:6px 12px;font-size:12px" id="refreshAppsBtn">Actualiser</button>
+      </div>
+      <div id="appsList"><div class="empty-state">Chargement…</div></div>
+    </div>
   </section>
 
   <!-- ================= HISTORY ================= -->
@@ -318,7 +330,7 @@
         <button class="btn primary" id="saveSettings">💾 Enregistrer</button>
       </div>
       <div class="hint">
-        Clickpart v0.6.4 — Tauri 2 / Rust. Les opérations système utilisent <code>pkexec</code> (polkit).
+        Clickpart v0.6.8 — Tauri 2 / Rust. Les opérations système utilisent <code>pkexec</code> (polkit).
       </div>
     </div>
 
@@ -332,7 +344,7 @@
 <!-- ================= CONFIRM MODAL ================= -->
 <div class="modal-back" id="modal">
   <div class="modal">
-    <h3>Confirmer l'installation</h3>
+    <h3 id="modalTitle">Confirmer l'installation</h3>
     <p id="modalText">—</p>
     <div class="cmd" id="modalCmd">—</div>
     <div class="actions">
@@ -367,10 +379,11 @@
   const dialogOpen = T.dialog ? T.dialog.open : null;
 
   const $ = (id) => document.getElementById(id);
-  const APP_VERSION = "0.6.7";
+  const APP_VERSION = "0.6.8";
   const state = {
     file: null,
     busy: false,
+    apps: [],
     config: { confirm_before_install: true, open_log_automatically: true, preferred_scope: "user" },
     system: null,
   };
@@ -428,6 +441,7 @@
       btn.classList.add("active");
       $("view-" + btn.dataset.view).classList.add("active");
       if (btn.dataset.view === "history") renderHistory();
+      if (btn.dataset.view === "apps") loadApps();
     });
   });
 
@@ -495,8 +509,30 @@
   function askConfirm(info) {
     return new Promise((resolve) => {
       const modal = $("modal");
+      $("modalTitle").textContent = "Confirmer l'installation";
+      $("modalOk").textContent = "Installer";
       $("modalText").textContent = `${info.label} — ${info.name}. ${info.needs_root ? "Une authentification administrateur sera demandée." : "L'installation se fera dans votre dossier utilisateur."}`;
       $("modalCmd").textContent = info.path;
+      modal.classList.add("show");
+
+      const done = (v) => {
+        modal.classList.remove("show");
+        $("modalOk").onclick = null;
+        $("modalCancel").onclick = null;
+        resolve(v);
+      };
+      $("modalOk").onclick = () => done(true);
+      $("modalCancel").onclick = () => done(false);
+    });
+  }
+
+  function askUninstall(app) {
+    return new Promise((resolve) => {
+      const modal = $("modal");
+      $("modalTitle").textContent = "Désinstaller " + app.name;
+      $("modalOk").textContent = "Désinstaller";
+      $("modalText").textContent = "Les fichiers créés par Clickpart vont être supprimés. Aucun autre logiciel ne sera touché.";
+      $("modalCmd").textContent = app.location;
       modal.classList.add("show");
 
       const done = (v) => {
@@ -551,6 +587,7 @@
       state.busy = false;
       $("installBtn").disabled = false;
       loadHistory();
+      loadApps();
     }
   }
 
@@ -587,6 +624,54 @@
       row.querySelector(".h-msg").textContent = e.message;
       list.appendChild(row);
     });
+  }
+
+  // ------------------------------- Applications installées
+  async function loadApps() {
+    const list = $("appsList");
+    try {
+      state.apps = await invoke("list_installed");
+      renderApps();
+    } catch (e) {
+      list.innerHTML = '<div class="empty-state">Impossible de lister les applications.</div>';
+    }
+  }
+
+  function renderApps() {
+    const list = $("appsList");
+    const apps = state.apps || [];
+    if (!apps.length) {
+      list.innerHTML = '<div class="empty-state">Aucune application détectée dans ~/.local.</div>';
+      return;
+    }
+    list.innerHTML = "";
+    apps.forEach((app) => {
+      const row = document.createElement("div");
+      row.className = "history-item";
+      row.innerHTML = `
+        <div class="h-ico">📦</div>
+        <div style="min-width:0;flex:1">
+          <div class="h-file"></div>
+          <div class="h-meta"></div>
+        </div>
+        <button class="btn danger" style="padding:6px 12px;font-size:12px;align-self:center">Désinstaller</button>`;
+      row.querySelector(".h-file").textContent = app.name;
+      row.querySelector(".h-meta").textContent = app.location;
+      row.querySelector("button").addEventListener("click", () => uninstall(app));
+      list.appendChild(row);
+    });
+  }
+
+  async function uninstall(app) {
+    if (!(await askUninstall(app))) return;
+    try {
+      const res = await invoke("uninstall_app", { desktop: app.desktop });
+      toast(res.message, res.success ? "ok" : "err");
+      if (res.details) logLine("\n" + res.details, "stdout");
+    } catch (e) {
+      toast(String(e), "err");
+    }
+    loadApps();
   }
 
   // ------------------------------- Reglages
@@ -695,6 +780,7 @@
   $("clearBtn").addEventListener("click", resetFile);
   $("installBtn").addEventListener("click", doInstall);
   $("clearLogBtn").addEventListener("click", clearLog);
+  $("refreshAppsBtn").addEventListener("click", loadApps);
   $("saveSettings").addEventListener("click", saveSettings);
   $("clearHistoryBtn").addEventListener("click", async () => {
     try { await invoke("clear_history"); state.history = []; renderHistory(); toast("Historique vidé."); }
@@ -729,6 +815,7 @@
     renderConfig();
     await loadSystem();
     await loadHistory();
+    await loadApps();
     await checkForUpdate();
     try {
       const startup = await invoke("startup_file");
