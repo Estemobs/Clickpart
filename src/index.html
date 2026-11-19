@@ -756,7 +756,8 @@
     $("updateInstall").onclick = async () => {
       close();
       try {
-        await invoke("update_app", { api_url: apiSource });
+        const apiUrl = apiSource || "https://api.github.com/repos/Estemobs/Clickpart/releases/latest";
+        await invoke("update_app", { api_url: apiUrl });
         toast("Mise à jour installée, redémarrage…", "ok");
       } catch (e) {
         toast("Echec de la mise à jour : " + e, "err");
